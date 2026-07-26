@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Segmentación de Corredores ANS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="datos_segmentacion.js"></script>
+<style>
+:root{--mor:#4A1E8C;--tur:#00B9AE;--dark:#231A3C;--gris:#5F5E5A;--light:#F4F1FA;--bd:#e6e2f0}
+*{box-sizing:border-box;margin:0}
+body{font-family:Arial,Helvetica,sans-serif;color:#2b2b30;background:#faf9f6;padding-bottom:60px}
+header{background:var(--dark);color:#fff;padding:26px 5vw 22px}
+header h1{font-size:22px}
+header p{color:#C9C2D8;margin-top:6px;font-size:13px}
+main{padding:22px 5vw;max-width:1240px;margin:0 auto}
+h2{font-size:18px;color:var(--dark);margin:30px 0 4px}
+.sub{font-size:12.5px;color:var(--gris);margin-bottom:12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px}
+.card .k{font-size:12px;color:var(--gris)}
+.card .v{font-size:22px;font-weight:bold;color:var(--dark);margin-top:4px}
+.filtros{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:12px;margin:14px 0}
+.filtros select,.filtros input{padding:8px 10px;border:1px solid #cfc9e0;border-radius:8px;font-size:13px;background:#fff;color:#2b2b30;flex:1;min-width:130px}
+.filtros button{padding:8px 14px;border:none;border-radius:8px;background:var(--mor);color:#fff;font-size:13px;cursor:pointer}
+.chartbox{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px;height:480px;position:relative}
+.leg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--gris);margin:8px 0}
+.leg span{display:flex;align-items:center;gap:5px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.tablewrap{overflow-x:auto;border:1px solid var(--bd);border-radius:10px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px}
+th{background:var(--mor);color:#fff;padding:9px 10px;text-align:left;font-size:11.5px;position:sticky;top:0;cursor:pointer;white-space:nowrap}
+td{padding:8px 10px;border-top:1px solid #f0edf7;white-space:nowrap}
+td.num,th.num{text-align:right}
+tr:hover td{background:#f8f6fc}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;color:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px}
+.box h3{font-size:14px;color:var(--dark);margin-bottom:8px}
+.cbx{position:relative;height:340px}
+.pager{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;align-items:center}
+.pager button{padding:6px 12px;border:1px solid #cfc9e0;border-radius:8px;background:#fff;color:var(--dark);font-size:12.5px;cursor:pointer}
+.pager button.on{background:var(--mor);color:#fff;border-color:var(--mor)}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager .info{font-size:12px;color:var(--gris);margin-left:4px}
+.note{font-size:11.5px;color:var(--gris);margin-top:10px}
+footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
+@media(max-width:760px){
+ .grid2{grid-template-columns:1fr}
+ .chartbox{height:380px;padding:8px}
+ header h1{font-size:18px}
+ .card .v{font-size:18px}
+ table{font-size:11.5px}
+ .filtros select,.filtros input{min-width:44%}
+}
+</style></head><body>
+<header><h1>Segmentación de Corredores &amp; Productividad — ANS</h1>
+<p id="hdr"></p></header>
+<main>
+<div class="cards" id="kpis"></div>
+
+<div class="filtros">
+ <input id="fq" list="dl" placeholder="Buscar corredor…" oninput="apply()"><datalist id="dl"></datalist>
+ <select id="fs" onchange="apply()"></select>
+ <select id="fr" onchange="apply()"></select>
+ <select id="fe" onchange="apply()"></select>
+ <select id="fc" onchange="apply()"></select>
+ <select id="ft" onchange="apply()"></select>
+ <button onclick="reset()">Limpiar</button>
+</div>
+
+<h2>Matriz valor × potencial</h2>
+<p class="sub">Cada punto es un corredor (responde a los filtros). Ejes log. Toca un punto para ver el nombre.</p>
+<div class="leg" id="leg"></div>
+<div class="chartbox"><canvas id="mx"></canvas></div>
+
+<h2>Corredores <span id="nres" style="font-weight:normal;font-size:13px;color:var(--gris)"></span></h2>
+<p class="sub">Ordena haciendo clic en los encabezados. 100 filas por página — usa el paginador para avanzar.</p>
+<div class="tablewrap"><table id="tc"><thead><tr>
+<th onclick="sortBy('n')">Corredor</th><th onclick="sortBy('s')">Segmento</th><th onclick="sortBy('c')">Cat</th>
+<th onclick="sortBy('rg')">Región</th><th onclick="sortBy('e')">Ejecutivo</th><th onclick="sortBy('t')">Tendencia</th>
+<th class="num" onclick="sortBy('p25')">Prod 2025</th><th class="num" onclick="sortBy('p26')">Prod 2026</th>
+<th class="num" onclick="sortBy('fecu')">FECU</th><th class="num" onclick="sortBy('head')">Headroom</th>
+</tr></thead><tbody></tbody></table></div>
+<div class="pager" id="pager"></div>
+
+<h2>Producción de la selección</h2>
+<p class="sub">Los tres gráficos responden a los filtros de arriba (segmento, región, ejecutivo, categoría, tendencia o búsqueda). Elige el año para los dos primeros.</p>
+<div class="filtros" style="margin-top:0">
+ <select id="fy" onchange="charts()"></select>
+</div>
+<div class="grid2">
+ <div class="box"><h3 id="tcia">Por compañía — Portal+SS vs Tradicionales</h3><div class="cbx"><canvas id="ccia"></canvas></div></div>
+ <div class="box"><h3 id="tram">Por ramo — solo Portal+SS</h3><div class="cbx"><canvas id="cram"></canvas></div></div>
+</div>
+<div class="box" style="margin-top:14px"><h3>Evolución mensual de la selección</h3><div class="cbx" style="height:280px"><canvas id="cmes"></canvas></div></div>
+<p class="note">Tradicionales no tiene apertura de ramo en la fuente, por eso el gráfico de ramos considera solo Portal+SS. La venta del año en curso llega hasta el último mes de producción real cargado.</p>
+</main>
+<footer>ANS · La Insurtech de Chile — Documento de trabajo interno. Metodología: headroom = FECU total (cías ANS + no ANS) − producción ANS año anterior; segmentos por cortes p75; universo red sin Grandes Brokers.</footer>
+<script>
+const COLS={'Socio Estratégico':'#4A1E8C','Por Conquistar':'#eda100','Fidelizar':'#1baf7a','Semillero':'#2a78d6','Reactivar':'#e34948'};
+const ORD=['Socio Estratégico','Por Conquistar','Fidelizar','Semillero','Reactivar'];
+const fmt=n=>Math.round(n).toLocaleString('es-CL');
+document.getElementById('hdr').textContent=`Red de ${CORR.length} corredores ANS vigentes (sin Grandes Brokers) · Producción real ${META.anio} cerrada a ${META.meses_txt} · Potencial FECU total (cías ANS + no ANS)`;
+
+function opts(id,label,vals){const s=document.getElementById(id);s.innerHTML=`<option value="">${label}: todos</option>`+vals.map(v=>`<option>${v}</option>`).join('');}
+opts('fs','Segmento',ORD);
+opts('fr','Región',[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort());
+opts('fe','Ejecutivo',[...new Set(CORR.map(x=>x.e))].sort());
+opts('fc','Categoría',[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort());
+opts('ft','Tendencia',[...new Set(CORR.map(x=>x.t))].sort());
+
+let F=[...CORR], sortK='head', sortD=-1, chart=null, page=1;
+const PAGE=100;
+function filtered(){
+ const q=document.getElementById('fq').value.toLowerCase();
+ const s=document.getElementById('fs').value, r=document.getElementById('fr').value,
+ e=document.getElementById('fe').value, c=document.getElementById('fc').value, t=document.getElementById('ft').value;
+ return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))&&(!s||x.s===s)&&(!r||x.rg===r)&&(!e||x.e===e)&&(!c||x.c===c)&&(!t||x.t===t));
+}
+function kpis(d){
+ const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
+ document.getElementById('kpis').innerHTML=
+ `<div class="card"><div class="k">Corredores</div><div class="v">${d.length}</div></div>
+  <div class="card"><div class="k">Prod ${META.anio_ant} (UF)</div><div class="v">${fmt(p25)}</div></div>
+  <div class="card"><div class="k">Prod ${META.anio} a ${META.meses_txt}</div><div class="v">${fmt(p26)}</div></div>
+  <div class="card"><div class="k">FECU total (UF)</div><div class="v">${fmt(fe)}</div></div>
+  <div class="card"><div class="k">Headroom (UF)</div><div class="v">${fmt(h)}</div></div>
+  <div class="card"><div class="k">Penetración</div><div class="v">${fe>0?(p25/fe*100).toFixed(1)+'%':'—'}</div></div>`;
+}
+function legend(d){
+ document.getElementById('leg').innerHTML=ORD.map(s=>{
+  const n=d.filter(x=>x.s===s).length;
+  return `<span><span class="dot" style="background:${COLS[s]}"></span>${s} (${n})</span>`}).join('');
+}
+const lineas={id:'lin',afterDatasetsDraw(ch){const{ctx,chartArea:a,scales:{x,y}}=ch;ctx.save();
+ctx.strokeStyle='#999';ctx.setLineDash([6,4]);ctx.lineWidth=1.1;
+const xv=x.getPixelForValue(META.cortes.valor);ctx.beginPath();ctx.moveTo(xv,a.top);ctx.lineTo(xv,a.bottom);ctx.stroke();
+const yh=y.getPixelForValue(META.cortes.head);ctx.beginPath();ctx.moveTo(a.left,yh);ctx.lineTo(a.right,yh);ctx.stroke();
+ctx.setLineDash([]);ctx.font='500 11px Arial';ctx.fillStyle='#777';
+ctx.fillText('Corte valor UF '+fmt(META.cortes.valor),xv+5,a.top+12);
+ctx.fillText('Corte potencial UF '+fmt(META.cortes.head),a.left+5,yh-6);ctx.restore();}};
+function draw(d){
+ const ds=ORD.map(s=>({label:s,data:d.filter(x=>x.s===s).map(x=>({x:Math.max(x.p25,1),y:Math.max(x.head,1),n:x.n,e:x.e})),
+  backgroundColor:COLS[s]+'B3',borderColor:COLS[s],pointRadius:3.5,pointHoverRadius:6}));
+ if(chart)chart.destroy();
+ chart=new Chart(document.getElementById('mx'),{type:'scatter',data:{datasets:ds},
+ options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:true},
+ plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].raw.n,
+ label:c=>[c.dataset.label+' · '+c.raw.e,'Prod '+META.anio_ant+': UF '+fmt(c.raw.x),'Headroom: UF '+fmt(c.raw.y)]}}},
+ scales:{x:{type:'logarithmic',title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
+  ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}},
+ y:{type:'logarithmic',title:{display:true,text:'Headroom capturable (UF, log)'},
+  ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}}}},plugins:[lineas]});
+}
+function tabla(d){
+ const ordered=[...d].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
+ const np=Math.max(1,Math.ceil(ordered.length/PAGE));
+ if(page>np)page=np;
+ const rows=ordered.slice((page-1)*PAGE,page*PAGE);
+ document.querySelector('#tc tbody').innerHTML=rows.map(x=>
+ `<tr><td>${x.n}</td><td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td><td>${x.c||''}</td>
+ <td>${x.rg||''}</td><td style="font-size:11px">${x.e}</td><td>${x.t}</td>
+ <td class="num">${fmt(x.p25)}</td><td class="num">${fmt(x.p26)}</td><td class="num">${fmt(x.fecu)}</td><td class="num"><b>${fmt(x.head)}</b></td></tr>`).join('');
+ document.getElementById('nres').textContent='('+d.length+' en filtro)';
+ pager(d.length,np);
+}
+function pager(n,np){
+ const p=document.getElementById('pager');
+ if(np<=1){p.innerHTML=n?'<span class="info">'+n+' corredores</span>':'';return;}
+ let bt=[];
+ bt.push('<button '+(page===1?'disabled':'')+' onclick="goPage('+(page-1)+')">‹ Anterior</button>');
+ const nums=new Set([1,2,np-1,np,page-1,page,page+1]);
+ let last=0;
+ [...nums].filter(x=>x>=1&&x<=np).sort((a,b)=>a-b).forEach(x=>{
+  if(x-last>1)bt.push('<span class="info">…</span>');
+  bt.push('<button class="'+(x===page?'on':'')+'" onclick="goPage('+x+')">'+x+'</button>');
+  last=x;});
+ bt.push('<button '+(page===np?'disabled':'')+' onclick="goPage('+(page+1)+')">Siguiente ›</button>');
+ bt.push('<span class="info">Filas '+((page-1)*PAGE+1)+'–'+Math.min(page*PAGE,n)+' de '+n+'</span>');
+ p.innerHTML=bt.join('');
+}
+function goPage(x){page=x;tabla(F);document.getElementById('tc').scrollIntoView({behavior:'smooth',block:'start'});}
+function sortBy(k){sortD=(sortK===k)?-sortD:-1;sortK=k;page=1;tabla(F);}
+function apply(){F=filtered();page=1;kpis(F);legend(F);draw(F);tabla(F);if(typeof charts==='function'&&document.getElementById('fy').options.length)charts();}
+function reset(){document.querySelectorAll('.filtros select').forEach(s=>s.value='');document.getElementById('fq').value='';apply();}
+
+let ccia=null,cram=null,cmes=null,RUTSEL=null;
+document.getElementById('dl').innerHTML=CORR.map(x=>`<option value="${x.n}">`).join('');
+const fy=document.getElementById('fy');
+fy.innerHTML=`<option value="1">Año ${META.anio} (a ${META.meses_txt})</option><option value="0">Año ${META.anio_ant} (completo)</option>`;
+function hbar(canvas,old,labels,dsets,horiz){
+ if(old)old.destroy();
+ return new Chart(canvas,{type:'bar',
+ data:{labels:labels,datasets:dsets},
+ options:{indexAxis:horiz?'y':'x',responsive:true,maintainAspectRatio:false,
+ plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+ tooltip:{callbacks:{label:c=>c.dataset.label+': UF '+fmt(c.raw)}}},
+ scales:{x:{ticks:{callback:v=>horiz?fmt(v):undefined,font:{size:10}},stacked:false},
+ y:{ticks:{font:{size:10}},stacked:false}}}});
+}
+function charts(){
+ const idxSel=new Set(F.map(x=>CORR.indexOf(x)));
+ const y=+fy.value;
+ // 1) por compañía: pss vs trad
+ const agg={};
+ for(const [i,c,yy,p,t] of DCIA){ if(yy!==y||!idxSel.has(i))continue;
+  agg[c]=agg[c]||{p:0,t:0}; agg[c].p+=p; agg[c].t+=t; }
+ const rows=Object.entries(agg).map(([c,v])=>({n:CIAS[c],p:v.p,t:v.t,tot:v.p+v.t}))
+  .filter(x=>Math.abs(x.tot)>1).sort((a,b)=>b.tot-a.tot).slice(0,12);
+ ccia=hbar(document.getElementById('ccia'),ccia,rows.map(x=>x.n),
+  [{label:'Portal+SS',data:rows.map(x=>Math.round(x.p)),backgroundColor:'#00B9AE'},
+   {label:'Tradicionales',data:rows.map(x=>Math.round(x.t)),backgroundColor:'#4A1E8C'}],true);
+ // 2) por ramo (portal)
+ const agr={};
+ for(const [i,r,yy,m] of DRAMO){ if(yy!==y||!idxSel.has(i))continue; agr[r]=(agr[r]||0)+m; }
+ const rr=Object.entries(agr).map(([r,m])=>({n:RAMOS[r],m})).filter(x=>Math.abs(x.m)>1)
+  .sort((a,b)=>b.m-a.m).slice(0,14);
+ cram=hbar(document.getElementById('cram'),cram,rr.map(x=>x.n),
+  [{label:'Portal+SS',data:rr.map(x=>Math.round(x.m)),backgroundColor:'#00B9AE'}],true);
+ // 3) evolución mensual ambos años
+ const m0=Array(12).fill(0),m1=Array(12).fill(0);
+ for(const [i,yy,mn,m] of DMES){ if(!idxSel.has(i))continue; (yy?m1:m0)[mn-1]+=m; }
+ const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+ if(cmes)cmes.destroy();
+ cmes=new Chart(document.getElementById('cmes'),{type:'line',
+ data:{labels:MESES,datasets:[
+  {label:String(META.anio_ant),data:m0.map(x=>Math.round(x)),borderColor:'#B4A7D6',backgroundColor:'#B4A7D6',tension:.25},
+  {label:String(META.anio),data:m1.map((x,i)=>i<META.mes?Math.round(x):null),borderColor:'#4A1E8C',backgroundColor:'#4A1E8C',tension:.25}]},
+ options:{responsive:true,maintainAspectRatio:false,
+ plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+ tooltip:{callbacks:{label:c=>c.dataset.label+': UF '+fmt(c.raw)}}},
+ scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
+}
+apply();charts();
+</script></body></html>
