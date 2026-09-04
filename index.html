@@ -69,10 +69,10 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 <div class="filtros">
  <input id="fq" list="dl" placeholder="Buscar corredor…" oninput="apply()"><datalist id="dl"></datalist>
  <div class="msdd"><button type="button" class="msbtn" id="fsbtn" onclick="toggleMS(event)">Segmento: todos</button><div class="mspanel" id="fspanel"></div></div>
- <select id="fr" onchange="apply()"></select>
- <select id="fe" onchange="apply()"></select>
- <select id="fc" onchange="apply()"></select>
- <select id="ft" onchange="apply()"></select>
+ <div class="msdd"><button type="button" class="msbtn" id="frbtn" onclick="toggleMS2(event,'frpanel')">Región: todos</button><div class="mspanel" id="frpanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="febtn" onclick="toggleMS2(event,'fepanel')">Ejecutivo: todos</button><div class="mspanel" id="fepanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="fcbtn" onclick="toggleMS2(event,'fcpanel')">Categoría: todos</button><div class="mspanel" id="fcpanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="ftbtn" onclick="toggleMS2(event,'ftpanel')">Tendencia: todos</button><div class="mspanel" id="ftpanel"></div></div>
  <button onclick="reset()">Limpiar</button>
 </div>
 
@@ -113,30 +113,47 @@ const fmt=n=>Math.round(n).toLocaleString('es-CL');
 document.getElementById('hdr').textContent=`Red de ${CORR.length} corredores ANS vigentes (sin Grandes Brokers) · Producción real ${META.anio} cerrada a ${META.meses_txt} · Potencial FECU elegible (solo ramos objetivo ANS)`;
 
 function opts(id,label,vals){const s=document.getElementById(id);s.innerHTML=`<option value="">${label}: todos</option>`+vals.map(v=>`<option>${v}</option>`).join('');}
-// Segmento como multi-select con checkboxes
-function buildSeg(){
- const pn=document.getElementById('fspanel');
- pn.innerHTML=ORD.map(s=>`<label><input type="checkbox" value="${s}" onchange="apply()"><span class="msdot" style="background:${COLS[s]}"></span>${s}</label>`).join('');
+// ==== Multi-select genérico para todos los filtros ====
+function buildMS(panelId,vals,withDot){
+ const pn=document.getElementById(panelId);
+ pn.innerHTML=vals.map(v=>{
+  const dot=withDot&&COLS[v]?`<span class="msdot" style="background:${COLS[v]}"></span>`:'';
+  return `<label><input type="checkbox" value="${String(v).replace(/"/g,'&quot;')}" onchange="apply()">${dot}${v}</label>`;
+ }).join('');
 }
-buildSeg();
-function segSel(){return [...document.querySelectorAll('#fspanel input:checked')].map(i=>i.value);}
+function selOf(panelId){return [...document.querySelectorAll('#'+panelId+' input:checked')].map(i=>i.value);}
 function toggleMS(e){e.stopPropagation();document.getElementById('fspanel').classList.toggle('open');}
-document.addEventListener('click',e=>{if(!e.target.closest('.msdd'))document.getElementById('fspanel').classList.remove('open');});
-function updSegBtn(){const sel=segSel();const b=document.getElementById('fsbtn');b.textContent='Segmento: '+(sel.length===0?'todos':sel.length===1?sel[0]:sel.length+' seleccionados');}
-opts('fr','Región',[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort());
-opts('fe','Ejecutivo',[...new Set(CORR.map(x=>x.e))].sort());
-opts('fc','Categoría',[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort());
-opts('ft','Tendencia',[...new Set(CORR.map(x=>x.t))].sort());
+function toggleMS2(e,panelId){e.stopPropagation();
+ document.querySelectorAll('.mspanel').forEach(p=>{if(p.id!==panelId)p.classList.remove('open')});
+ document.getElementById(panelId).classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.msdd'))document.querySelectorAll('.mspanel').forEach(p=>p.classList.remove('open'));});
+function updBtn(btnId,panelId,label){const sel=selOf(panelId);
+ document.getElementById(btnId).textContent=label+': '+(sel.length===0?'todos':sel.length===1?sel[0]:sel.length+' seleccionados');}
+// construir cada filtro
+buildMS('fspanel',ORD,true);
+buildMS('frpanel',[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort(),false);
+buildMS('fepanel',[...new Set(CORR.map(x=>x.e))].sort(),false);
+buildMS('fcpanel',[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort(),false);
+buildMS('ftpanel',[...new Set(CORR.map(x=>x.t))].sort(),false);
+function segSel(){return selOf('fspanel');}
+
+
+
+
 
 let F=[...CORR], sortK='head', sortD=-1, chart=null, page=1;
 const PAGE=100;
 function filtered(){
  const q=document.getElementById('fq').value.toLowerCase();
- const segs=segSel();
- const r=document.getElementById('fr').value,
- e=document.getElementById('fe').value, c=document.getElementById('fc').value, t=document.getElementById('ft').value;
- updSegBtn();
- return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))&&(segs.length===0||segs.includes(x.s))&&(!r||x.rg===r)&&(!e||x.e===e)&&(!c||x.c===c)&&(!t||x.t===t));
+ const segs=segSel(),regs=selOf('frpanel'),ejs=selOf('fepanel'),cats=selOf('fcpanel'),tends=selOf('ftpanel');
+ updBtn('fsbtn','fspanel','Segmento');updBtn('frbtn','frpanel','Región');updBtn('febtn','fepanel','Ejecutivo');
+ updBtn('fcbtn','fcpanel','Categoría');updBtn('ftbtn','ftpanel','Tendencia');
+ return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))
+  &&(segs.length===0||segs.includes(x.s))
+  &&(regs.length===0||regs.includes(x.rg))
+  &&(ejs.length===0||ejs.includes(x.e))
+  &&(cats.length===0||cats.includes(x.c))
+  &&(tends.length===0||tends.includes(x.t)));
 }
 function kpis(d){
  const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
@@ -206,7 +223,7 @@ function pager(n,np){
 function goPage(x){page=x;tabla(F);document.getElementById('tc').scrollIntoView({behavior:'smooth',block:'start'});}
 function sortBy(k){sortD=(sortK===k)?-sortD:-1;sortK=k;page=1;tabla(F);}
 function apply(){F=filtered();page=1;kpis(F);legend(F);draw(F);tabla(F);if(typeof charts==='function'&&document.getElementById('fy').options.length)charts();}
-function reset(){document.querySelectorAll('.filtros select').forEach(s=>s.value='');document.querySelectorAll('#fspanel input').forEach(i=>i.checked=false);document.getElementById('fq').value='';apply();}
+function reset(){document.querySelectorAll('.mspanel input').forEach(i=>i.checked=false);document.getElementById('fq').value='';apply();}
 
 let ccia=null,cram=null,cmes=null,cfecu=null,RUTSEL=null;
 document.getElementById('dl').innerHTML=CORR.map(x=>`<option value="${x.n}">`).join('');
