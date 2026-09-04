@@ -131,9 +131,9 @@ function updBtn(btnId,panelId,label){const sel=selOf(panelId);
  document.getElementById(btnId).textContent=label+': '+(sel.length===0?'todos':sel.length===1?sel[0]:sel.length+' seleccionados');}
 // construir cada filtro
 buildMS('fspanel',ORD,true);
-buildMS('frpanel',[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort(),false);
+buildMS('frpanel',[...[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort(),'Sin región'],false);
 buildMS('fepanel',[...new Set(CORR.map(x=>x.e))].sort(),false);
-buildMS('fcpanel',[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort(),false);
+buildMS('fcpanel',[...[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort(),'Sin categoría'],false);
 buildMS('ftpanel',[...new Set(CORR.map(x=>x.t))].sort(),false);
 function segSel(){return selOf('fspanel');}
 
@@ -150,9 +150,9 @@ function filtered(){
  updBtn('fcbtn','fcpanel','Categoría');updBtn('ftbtn','ftpanel','Tendencia');
  return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))
   &&(segs.length===0||segs.includes(x.s))
-  &&(regs.length===0||regs.includes(x.rg))
+  &&(regs.length===0||regs.includes(x.rg)||(regs.includes('Sin región')&&(!x.rg||x.rg.trim()==='')))
   &&(ejs.length===0||ejs.includes(x.e))
-  &&(cats.length===0||cats.includes(x.c))
+  &&(cats.length===0||cats.includes(x.c)||(cats.includes('Sin categoría')&&(!x.c||x.c.trim()==='')))
   &&(tends.length===0||tends.includes(x.t)));
 }
 function kpis(d){
