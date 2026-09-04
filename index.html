@@ -93,12 +93,12 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 <div class="box" style="margin-top:14px"><h3>Evolución mensual de la selección</h3><div class="cbx" style="height:280px"><canvas id="cmes"></canvas></div></div>
 <p class="note">Tradicionales no tiene apertura de ramo en la fuente, por eso el gráfico de ramos considera solo Portal+SS. La venta del año en curso llega hasta el último mes de producción real cargado.</p>
 </main>
-<footer>ANS · La Insurtech de Chile — Documento de trabajo interno. Metodología: headroom = FECU total (cías ANS + no ANS) − producción ANS año anterior; segmentos por cortes p75; universo red sin Grandes Brokers.</footer>
+<footer>ANS · La Insurtech de Chile — Documento de trabajo interno. Metodología: headroom = FECU elegible (solo ramos objetivo ANS, cías ANS + no ANS) − producción ANS año anterior; segmentos por cortes p75; universo red sin Grandes Brokers.</footer>
 <script>
 const COLS={'Socio Estratégico':'#4A1E8C','Por Conquistar':'#eda100','Fidelizar':'#1baf7a','Semillero':'#2a78d6','Reactivar':'#e34948'};
 const ORD=['Socio Estratégico','Por Conquistar','Fidelizar','Semillero','Reactivar'];
 const fmt=n=>Math.round(n).toLocaleString('es-CL');
-document.getElementById('hdr').textContent=`Red de ${CORR.length} corredores ANS vigentes (sin Grandes Brokers) · Producción real ${META.anio} cerrada a ${META.meses_txt} · Potencial FECU total (cías ANS + no ANS)`;
+document.getElementById('hdr').textContent=`Red de ${CORR.length} corredores ANS vigentes (sin Grandes Brokers) · Producción real ${META.anio} cerrada a ${META.meses_txt} · Potencial FECU elegible (solo ramos objetivo ANS)`;
 
 function opts(id,label,vals){const s=document.getElementById(id);s.innerHTML=`<option value="">${label}: todos</option>`+vals.map(v=>`<option>${v}</option>`).join('');}
 opts('fs','Segmento',ORD);
@@ -117,11 +117,14 @@ function filtered(){
 }
 function kpis(d){
  const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
+ const pp=d.reduce((a,x)=>a+(x.pp26||0),0),pt=d.reduce((a,x)=>a+(x.pt26||0),0);
  document.getElementById('kpis').innerHTML=
  `<div class="card"><div class="k">Corredores</div><div class="v">${d.length}</div></div>
+  <div class="card" style="border-top:3px solid #00B9AE"><div class="k">Portal ${META.anio} (UF)</div><div class="v">${fmt(pp)}</div></div>
+  <div class="card" style="border-top:3px solid #4A1E8C"><div class="k">Tradicional ${META.anio} (UF)</div><div class="v">${fmt(pt)}</div></div>
+  <div class="card" style="border-top:3px solid #231A3C"><div class="k">Total ANS ${META.anio} a ${META.meses_txt}</div><div class="v">${fmt(p26)}</div></div>
   <div class="card"><div class="k">Prod ${META.anio_ant} (UF)</div><div class="v">${fmt(p25)}</div></div>
-  <div class="card"><div class="k">Prod ${META.anio} a ${META.meses_txt}</div><div class="v">${fmt(p26)}</div></div>
-  <div class="card"><div class="k">FECU total (UF)</div><div class="v">${fmt(fe)}</div></div>
+  <div class="card"><div class="k">FECU elegible (UF)</div><div class="v">${fmt(fe)}</div></div>
   <div class="card"><div class="k">Headroom (UF)</div><div class="v">${fmt(h)}</div></div>
   <div class="card"><div class="k">Penetración</div><div class="v">${fe>0?(p25/fe*100).toFixed(1)+'%':'—'}</div></div>`;
 }
