@@ -20,6 +20,16 @@ h2{font-size:18px;color:var(--dark);margin:30px 0 4px}
 .filtros{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:12px;margin:14px 0}
 .filtros select,.filtros input{padding:8px 10px;border:1px solid #cfc9e0;border-radius:8px;font-size:13px;background:#fff;color:#2b2b30;flex:1;min-width:130px}
 .filtros button{padding:8px 14px;border:none;border-radius:8px;background:var(--mor);color:#fff;font-size:13px;cursor:pointer}
+.msdd{position:relative;flex:1;min-width:130px}
+.msbtn{width:100%;padding:8px 10px;border:1px solid #cfc9e0;border-radius:8px;font-size:13px;background:#fff;color:#2b2b30;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msbtn:after{content:"▾";float:right;color:#9990b5}
+.mspanel{display:none;position:absolute;z-index:30;top:100%;left:0;right:0;margin-top:4px;background:#fff;border:1px solid #cfc9e0;border-radius:8px;box-shadow:0 6px 18px rgba(35,26,60,.15);padding:6px;max-height:260px;overflow:auto}
+.mspanel.open{display:block}
+.mspanel label{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:13px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.mspanel label:hover{background:var(--light)}
+.mspanel input{width:auto;flex:none;min-width:0}
+.msdot{display:inline-block;width:9px;height:9px;border-radius:50%}
+
 .chartbox{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px;height:480px;position:relative}
 .leg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--gris);margin:8px 0}
 .leg span{display:flex;align-items:center;gap:5px}
@@ -58,7 +68,7 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 
 <div class="filtros">
  <input id="fq" list="dl" placeholder="Buscar corredor…" oninput="apply()"><datalist id="dl"></datalist>
- <select id="fs" onchange="apply()"></select>
+ <div class="msdd"><button type="button" class="msbtn" id="fsbtn" onclick="toggleMS(event)">Segmento: todos</button><div class="mspanel" id="fspanel"></div></div>
  <select id="fr" onchange="apply()"></select>
  <select id="fe" onchange="apply()"></select>
  <select id="fc" onchange="apply()"></select>
@@ -92,6 +102,7 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
  <div class="box"><h3 id="tram">Por ramo — solo Portal+SS</h3><div class="cbx"><canvas id="cram"></canvas></div></div>
 </div>
 <div class="box" style="margin-top:14px"><h3>Evolución mensual de la selección</h3><div class="cbx" style="height:280px"><canvas id="cmes"></canvas></div></div>
+<div class="box" style="margin-top:14px"><h3>Potencial FECU por ramo — mercado del corredor (ramos elegibles)</h3><div class="cbx" style="height:420px"><canvas id="cfecu"></canvas></div></div>
 <p class="note">Tradicionales no tiene apertura de ramo en la fuente, por eso el gráfico de ramos considera solo Portal+SS. La venta del año en curso llega hasta el último mes de producción real cargado.</p>
 </main>
 <footer>ANS · La Insurtech de Chile — Documento de trabajo interno. Metodología: headroom = FECU elegible (solo ramos objetivo ANS, cías ANS + no ANS) − producción ANS año anterior; segmentos por cortes p75; universo red sin Grandes Brokers.</footer>
@@ -102,7 +113,16 @@ const fmt=n=>Math.round(n).toLocaleString('es-CL');
 document.getElementById('hdr').textContent=`Red de ${CORR.length} corredores ANS vigentes (sin Grandes Brokers) · Producción real ${META.anio} cerrada a ${META.meses_txt} · Potencial FECU elegible (solo ramos objetivo ANS)`;
 
 function opts(id,label,vals){const s=document.getElementById(id);s.innerHTML=`<option value="">${label}: todos</option>`+vals.map(v=>`<option>${v}</option>`).join('');}
-opts('fs','Segmento',ORD);
+// Segmento como multi-select con checkboxes
+function buildSeg(){
+ const pn=document.getElementById('fspanel');
+ pn.innerHTML=ORD.map(s=>`<label><input type="checkbox" value="${s}" onchange="apply()"><span class="msdot" style="background:${COLS[s]}"></span>${s}</label>`).join('');
+}
+buildSeg();
+function segSel(){return [...document.querySelectorAll('#fspanel input:checked')].map(i=>i.value);}
+function toggleMS(e){e.stopPropagation();document.getElementById('fspanel').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.msdd'))document.getElementById('fspanel').classList.remove('open');});
+function updSegBtn(){const sel=segSel();const b=document.getElementById('fsbtn');b.textContent='Segmento: '+(sel.length===0?'todos':sel.length===1?sel[0]:sel.length+' seleccionados');}
 opts('fr','Región',[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort());
 opts('fe','Ejecutivo',[...new Set(CORR.map(x=>x.e))].sort());
 opts('fc','Categoría',[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort());
@@ -112,9 +132,11 @@ let F=[...CORR], sortK='head', sortD=-1, chart=null, page=1;
 const PAGE=100;
 function filtered(){
  const q=document.getElementById('fq').value.toLowerCase();
- const s=document.getElementById('fs').value, r=document.getElementById('fr').value,
+ const segs=segSel();
+ const r=document.getElementById('fr').value,
  e=document.getElementById('fe').value, c=document.getElementById('fc').value, t=document.getElementById('ft').value;
- return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))&&(!s||x.s===s)&&(!r||x.rg===r)&&(!e||x.e===e)&&(!c||x.c===c)&&(!t||x.t===t));
+ updSegBtn();
+ return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))&&(segs.length===0||segs.includes(x.s))&&(!r||x.rg===r)&&(!e||x.e===e)&&(!c||x.c===c)&&(!t||x.t===t));
 }
 function kpis(d){
  const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
@@ -184,9 +206,9 @@ function pager(n,np){
 function goPage(x){page=x;tabla(F);document.getElementById('tc').scrollIntoView({behavior:'smooth',block:'start'});}
 function sortBy(k){sortD=(sortK===k)?-sortD:-1;sortK=k;page=1;tabla(F);}
 function apply(){F=filtered();page=1;kpis(F);legend(F);draw(F);tabla(F);if(typeof charts==='function'&&document.getElementById('fy').options.length)charts();}
-function reset(){document.querySelectorAll('.filtros select').forEach(s=>s.value='');document.getElementById('fq').value='';apply();}
+function reset(){document.querySelectorAll('.filtros select').forEach(s=>s.value='');document.querySelectorAll('#fspanel input').forEach(i=>i.checked=false);document.getElementById('fq').value='';apply();}
 
-let ccia=null,cram=null,cmes=null,RUTSEL=null;
+let ccia=null,cram=null,cmes=null,cfecu=null,RUTSEL=null;
 document.getElementById('dl').innerHTML=CORR.map(x=>`<option value="${x.n}">`).join('');
 const fy=document.getElementById('fy');
 fy.innerHTML=`<option value="1">Año ${META.anio} (a ${META.meses_txt})</option><option value="0">Año ${META.anio_ant} (completo)</option>`;
@@ -232,6 +254,13 @@ function charts(){
  plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
  tooltip:{callbacks:{label:c=>c.dataset.label+': UF '+fmt(c.raw)}}},
  scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
+ // 4) FECU por ramo (mercado del corredor, ramos elegibles)
+ const af={};
+ for(const [i,rid,m] of DFECU){ if(!idxSel.has(i))continue; af[rid]=(af[rid]||0)+m; }
+ const ff=Object.entries(af).map(([rid,m])=>({n:FRAMOS[rid],m})).filter(x=>Math.abs(x.m)>1)
+  .sort((a,b)=>b.m-a.m);
+ cfecu=hbar(document.getElementById('cfecu'),cfecu,ff.map(x=>x.n),
+  [{label:'FECU elegible (UF)',data:ff.map(x=>Math.round(x.m)),backgroundColor:'#eda100'}],true);
 }
 apply();charts();
 </script></body></html>
