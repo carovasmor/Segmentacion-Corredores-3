@@ -77,6 +77,7 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 <th onclick="sortBy('n')">Corredor</th><th onclick="sortBy('s')">Segmento</th><th onclick="sortBy('c')">Cat</th>
 <th onclick="sortBy('rg')">Región</th><th onclick="sortBy('e')">Ejecutivo</th><th onclick="sortBy('t')">Tendencia</th>
 <th class="num" onclick="sortBy('p25')">Prod 2025</th><th class="num" onclick="sortBy('p26')">Prod 2026</th>
+<th class="num" onclick="sortBy('pp26')">Portal 2026</th><th class="num" onclick="sortBy('pt26')">Tradic. 2026</th>
 <th class="num" onclick="sortBy('fecu')">FECU</th><th class="num" onclick="sortBy('head')">Headroom</th>
 </tr></thead><tbody></tbody></table></div>
 <div class="pager" id="pager"></div>
@@ -161,7 +162,7 @@ function tabla(d){
  document.querySelector('#tc tbody').innerHTML=rows.map(x=>
  `<tr><td>${x.n}</td><td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td><td>${x.c||''}</td>
  <td>${x.rg||''}</td><td style="font-size:11px">${x.e}</td><td>${x.t}</td>
- <td class="num">${fmt(x.p25)}</td><td class="num">${fmt(x.p26)}</td><td class="num">${fmt(x.fecu)}</td><td class="num"><b>${fmt(x.head)}</b></td></tr>`).join('');
+ <td class="num">${fmt(x.p25)}</td><td class="num">${fmt(x.p26)}</td><td class="num" style="color:#00887f">${fmt(x.pp26||0)}</td><td class="num" style="color:#4A1E8C">${fmt(x.pt26||0)}</td><td class="num">${fmt(x.fecu)}</td><td class="num"><b>${fmt(x.head)}</b></td></tr>`).join('');
  document.getElementById('nres').textContent='('+d.length+' en filtro)';
  pager(d.length,np);
 }
