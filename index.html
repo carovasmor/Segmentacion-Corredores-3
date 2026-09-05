@@ -85,7 +85,7 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 </div>
 
 <h2>Matriz valor × potencial</h2>
-<p class="sub">Cada punto es un corredor (responde a los filtros). Ejes log. Toca un punto para ver el nombre.</p>
+<p class="sub">Cada punto es un corredor (responde a los filtros). Ejes log. Toca un punto para ver el nombre; doble clic para filtrar solo ese corredor.</p>
 <div class="leg" id="leg"></div>
 <div class="chartbox"><canvas id="mx"></canvas></div>
 
@@ -198,6 +198,7 @@ function draw(d){
  if(chart)chart.destroy();
  chart=new Chart(document.getElementById('mx'),{type:'scatter',data:{datasets:ds},
  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:true},
+ onClick:(evt,els)=>{if(els&&els.length){const now=Date.now();if(window._lastPt&&window._lastPt.i===els[0].datasetIndex&&window._lastPt.j===els[0].index&&(now-window._lastPt.t)<400){const raw=chart.data.datasets[els[0].datasetIndex].data[els[0].index];if(raw&&raw.n){document.getElementById('fq').value=raw.n;toggleClear();apply();document.getElementById('mx').scrollIntoView({behavior:'smooth',block:'center'});}}window._lastPt={i:els[0].datasetIndex,j:els[0].index,t:now};}},
  plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].raw.n,
  label:c=>[c.dataset.label+' · '+c.raw.e,'Prod '+META.anio_ant+': UF '+fmt(c.raw.x),'Headroom: UF '+fmt(c.raw.y)]}}},
  scales:{x:{type:'logarithmic',title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
