@@ -2,6 +2,7 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Segmentación de Corredores ANS</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="datos_segmentacion.js"></script>
 <style>
 :root{--mor:#4A1E8C;--tur:#00B9AE;--dark:#231A3C;--gris:#5F5E5A;--light:#F4F1FA;--bd:#e6e2f0}
@@ -60,6 +61,22 @@ tr:hover td{background:#f8f6fc}
 .pager .info{font-size:12px;color:var(--gris);margin-left:4px}
 .note{font-size:11.5px;color:var(--gris);margin-top:10px}
 footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
+/* Toggle tipo producción */
+.tprod{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tprod span{font-size:12px;color:var(--gris);white-space:nowrap}
+.tprod-btn{padding:7px 14px;border:1.5px solid #cfc9e0;border-radius:20px;background:#fff;color:var(--dark);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.tprod-btn:hover{border-color:var(--mor);color:var(--mor)}
+.tprod-btn.active{background:var(--mor);color:#fff;border-color:var(--mor)}
+.tprod-btn.active.tp{background:#00887f;border-color:#00887f}
+.tprod-btn.active.tt{background:#4A1E8C;border-color:#4A1E8C}
+/* Columna activa en tabla */
+.col-act{background:#f0f9ff!important;font-weight:700}
+.col-act-p{background:#e8faf7!important;font-weight:700;color:#006d63!important}
+.col-act-t{background:#f0ecfb!important;font-weight:700;color:#3d177a!important}
+/* Barra tabla-header */
+.tabla-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.btn-xls{padding:8px 16px;border:none;border-radius:8px;background:#1d7a4f;color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn-xls:hover{background:#155e3c}
 @media(max-width:760px){
  .grid2{grid-template-columns:1fr}
  .chartbox{height:380px;padding:8px}
@@ -83,19 +100,36 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
  <div class="msdd"><button type="button" class="msbtn" id="ftbtn" onclick="toggleMS2(event,'ftpanel')">Tendencia: todos</button><div class="mspanel" id="ftpanel"></div></div>
  <button onclick="reset()">Limpiar</button>
 </div>
+<div class="filtros" style="margin-top:0;padding:10px 14px">
+  <div class="tprod">
+    <span>Tipo producción:</span>
+    <button class="tprod-btn active" id="tp-all" onclick="setProd('all')">Todos</button>
+    <button class="tprod-btn tp" id="tp-pp" onclick="setProd('pp26')">🔵 Renovación / Portal</button>
+    <button class="tprod-btn tt" id="tp-pt" onclick="setProd('pt26')">🟣 Venta Nueva / Tradicional</button>
+  </div>
+</div>
 
 <h2>Matriz valor × potencial</h2>
 <p class="sub">Cada punto es un corredor (responde a los filtros). Ejes log. Toca un punto para ver el nombre; doble clic para filtrar solo ese corredor.</p>
 <div class="leg" id="leg"></div>
 <div class="chartbox"><canvas id="mx"></canvas></div>
 
-<h2>Corredores <span id="nres" style="font-weight:normal;font-size:13px;color:var(--gris)"></span></h2>
-<p class="sub">Ordena haciendo clic en los encabezados. 100 filas por página — usa el paginador para avanzar.</p>
+<div class="tabla-hdr">
+  <div>
+    <h2 style="margin:30px 0 4px">Detalle Corredor <span id="nres" style="font-weight:normal;font-size:13px;color:var(--gris)"></span></h2>
+    <p class="sub">Ordena haciendo clic en los encabezados. 100 filas por página — usa el paginador para avanzar.</p>
+  </div>
+  <button class="btn-xls" onclick="downloadXLS()">⬇ Descargar XLS</button>
+</div>
 <div class="tablewrap"><table id="tc"><thead><tr>
 <th onclick="sortBy('n')">Corredor</th><th onclick="sortBy('s')">Segmento</th><th onclick="sortBy('c')">Cat</th>
 <th onclick="sortBy('rg')">Región</th><th onclick="sortBy('e')">Ejecutivo</th><th onclick="sortBy('t')">Tendencia</th>
-<th class="num" onclick="sortBy('p25')">Prod 2025</th><th class="num" onclick="sortBy('p26')">Prod 2026</th>
-<th class="num" onclick="sortBy('pp26')">Portal 2026</th><th class="num" onclick="sortBy('pt26')">Tradic. 2026</th>
+<th class="num" onclick="sortBy('pp25')" id="thPP25">Portal+SS 2025</th>
+<th class="num" onclick="sortBy('pt25')" id="thPT25">Tradic. 2025</th>
+<th class="num" onclick="sortBy('p25')"  id="thP25">Total 2025</th>
+<th class="num" onclick="sortBy('pp26')" id="thPP26">Portal+SS 2026</th>
+<th class="num" onclick="sortBy('pt26')" id="thPT26">Tradic. 2026</th>
+<th class="num" onclick="sortBy('p26')"  id="thP26">Total 2026</th>
 <th class="num" onclick="sortBy('fecu')">FECU</th><th class="num" onclick="sortBy('head')">Headroom</th>
 </tr></thead><tbody></tbody></table></div>
 <div class="pager" id="pager"></div>
@@ -155,6 +189,23 @@ function segSel(){return selOf('fspanel');}
 
 let F=[...CORR], sortK='head', sortD=-1, chart=null, page=1;
 const PAGE=100;
+let prodField='all'; // 'all' | 'pp26' | 'pt26'
+
+// Pre-computar portal y tradicional 2025 por corredor desde DCIA (yy=0 = anio_ant)
+const _pp25={},_pt25={};
+for(const [i,c,yy,p,t] of DCIA){
+  if(yy!==0) continue;
+  _pp25[i]=(_pp25[i]||0)+p;
+  _pt25[i]=(_pt25[i]||0)+t;
+}
+CORR.forEach((x,i)=>{x.pp25=Math.round(_pp25[i]||0);x.pt25=Math.round(_pt25[i]||0);});
+
+function setProd(f){
+  prodField=f;
+  document.querySelectorAll('.tprod-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(f==='all'?'tp-all':f==='pp26'?'tp-pp':'tp-pt').classList.add('active');
+  apply();
+}
 function filtered(){
  const q=document.getElementById('fq').value.toLowerCase();
  const segs=segSel(),regs=selOf('frpanel'),ejs=selOf('fepanel'),cats=selOf('fcpanel'),tends=selOf('ftpanel');
@@ -169,16 +220,34 @@ function filtered(){
 }
 function kpis(d){
  const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
- const pp=d.reduce((a,x)=>a+(x.pp26||0),0),pt=d.reduce((a,x)=>a+(x.pt26||0),0);
+ const pp26=d.reduce((a,x)=>a+(x.pp26||0),0),pt26=d.reduce((a,x)=>a+(x.pt26||0),0);
+ const pp25=d.reduce((a,x)=>a+(x.pp25||0),0),pt25=d.reduce((a,x)=>a+(x.pt25||0),0);
+ const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
+ const hlPP =isPP?'border-top:3px solid #00887f;background:#e8faf7':'border-top:3px solid #00B9AE';
+ const hlPT =isPT?'border-top:3px solid #3d177a;background:#f0ecfb':'border-top:3px solid #4A1E8C';
+ const selC =isPP?'#006d63':isPT?'#3d177a':'#231A3C';
+ const sel26=isPP?pp26:isPT?pt26:p26;
+ const sel25=isPP?pp25:isPT?pt25:p25;
+ const selLbl=isPP?'Portal+SS':isPT?'Tradicional':'Total ANS';
  document.getElementById('kpis').innerHTML=
  `<div class="card"><div class="k">Corredores</div><div class="v">${d.length}</div></div>
-  <div class="card" style="border-top:3px solid #00B9AE"><div class="k">Portal ${META.anio} (UF)</div><div class="v">${fmt(pp)}</div></div>
-  <div class="card" style="border-top:3px solid #4A1E8C"><div class="k">Tradicional ${META.anio} (UF)</div><div class="v">${fmt(pt)}</div></div>
-  <div class="card" style="border-top:3px solid #231A3C"><div class="k">Total ANS ${META.anio} a ${META.meses_txt}</div><div class="v">${fmt(p26)}</div></div>
-  <div class="card"><div class="k">Prod ${META.anio_ant} (UF)</div><div class="v">${fmt(p25)}</div></div>
+  ${!isAll?`
+  <div class="card" style="border-top:3px solid ${selC};background:#fffde8">
+    <div class="k">${selLbl} ${META.anio} (UF)</div>
+    <div class="v" style="color:${selC};font-size:26px">${fmt(sel26)}</div>
+  </div>
+  <div class="card" style="border-top:3px solid ${selC};background:#fffff0">
+    <div class="k">${selLbl} ${META.anio_ant} (UF)</div>
+    <div class="v" style="color:${selC};font-size:22px">${fmt(sel25)}</div>
+  </div>`:''}
+  <div class="card" style="${hlPP}"><div class="k">Portal+SS ${META.anio} (UF)</div><div class="v" style="color:#006d63">${fmt(pp26)}</div></div>
+  <div class="card" style="${hlPT}"><div class="k">Tradicional ${META.anio} (UF)</div><div class="v" style="color:#3d177a">${fmt(pt26)}</div></div>
+  <div class="card" style="border-top:3px solid #231A3C${isAll?';background:#f0f4ff':';opacity:.5'}"><div class="k">Total ${META.anio} (UF)</div><div class="v">${fmt(p26)}</div></div>
+  <div class="card" style="${hlPP}"><div class="k">Portal+SS ${META.anio_ant} (UF)</div><div class="v" style="color:#006d63">${fmt(pp25)}</div></div>
+  <div class="card" style="${hlPT}"><div class="k">Tradicional ${META.anio_ant} (UF)</div><div class="v" style="color:#3d177a">${fmt(pt25)}</div></div>
+  <div class="card" style="border-top:3px solid #888${isAll?'':';opacity:.5'}"><div class="k">Total ${META.anio_ant} (UF)</div><div class="v">${fmt(p25)}</div></div>
   <div class="card"><div class="k">FECU elegible (UF)</div><div class="v">${fmt(fe)}</div></div>
-  <div class="card"><div class="k">Headroom (UF)</div><div class="v">${fmt(h)}</div></div>
-  <div class="card"><div class="k">Penetración</div><div class="v">${fe>0?(p25/fe*100).toFixed(1)+'%':'—'}</div></div>`;
+  <div class="card"><div class="k">Headroom (UF)</div><div class="v">${fmt(h)}</div></div>`;
 }
 function legend(d){
  document.getElementById('leg').innerHTML=ORD.map(s=>{
@@ -211,12 +280,56 @@ function tabla(d){
  const np=Math.max(1,Math.ceil(ordered.length/PAGE));
  if(page>np)page=np;
  const rows=ordered.slice((page-1)*PAGE,page*PAGE);
- document.querySelector('#tc tbody').innerHTML=rows.map(x=>
- `<tr><td>${x.n}</td><td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td><td>${x.c||''}</td>
- <td>${x.rg||''}</td><td style="font-size:11px">${x.e}</td><td>${x.t}</td>
- <td class="num">${fmt(x.p25)}</td><td class="num">${fmt(x.p26)}</td><td class="num" style="color:#00887f">${fmt(x.pp26||0)}</td><td class="num" style="color:#4A1E8C">${fmt(x.pt26||0)}</td><td class="num">${fmt(x.fecu)}</td><td class="num"><b>${fmt(x.head)}</b></td></tr>`).join('');
+ const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
+ // Header highlights
+ const BG_PP='#005f57',BG_PT='#2d0e6e',BG_DEF='#4A1E8C';
+ document.getElementById('thPP25').style.background=isPP?BG_PP:isPT?BG_DEF+'44':BG_DEF;
+ document.getElementById('thPT25').style.background=isPT?BG_PT:isPP?BG_DEF+'44':BG_DEF;
+ document.getElementById('thP25').style.background=isAll?BG_DEF:BG_DEF+'44';
+ document.getElementById('thPP26').style.background=isPP?BG_PP:isPT?BG_DEF+'44':BG_DEF;
+ document.getElementById('thPT26').style.background=isPT?BG_PT:isPP?BG_DEF+'44':BG_DEF;
+ document.getElementById('thP26').style.background=isAll?BG_DEF:BG_DEF+'44';
+ const clPP25=isPP?'num col-act-p':'num',clPT25=isPT?'num col-act-t':'num';
+ const clP25=isAll?'num col-act':'num';
+ const clPP26=isPP?'num col-act-p':'num',clPT26=isPT?'num col-act-t':'num';
+ const clP26=isAll?'num col-act':'num';
+ document.querySelector('#tc tbody').innerHTML=rows.map(x=>`<tr>
+  <td>${x.n}</td>
+  <td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td>
+  <td>${x.c||''}</td><td>${x.rg||''}</td>
+  <td style="font-size:11px">${x.e}</td><td>${x.t}</td>
+  <td class="${clPP25}" style="color:#006d63">${fmt(x.pp25||0)}</td>
+  <td class="${clPT25}" style="color:#3d177a">${fmt(x.pt25||0)}</td>
+  <td class="${clP25}">${fmt(x.p25)}</td>
+  <td class="${clPP26}" style="color:#006d63">${fmt(x.pp26||0)}</td>
+  <td class="${clPT26}" style="color:#3d177a">${fmt(x.pt26||0)}</td>
+  <td class="${clP26}">${fmt(x.p26)}</td>
+  <td class="num">${fmt(x.fecu)}</td>
+  <td class="num"><b>${fmt(x.head)}</b></td>
+ </tr>`).join('');
  document.getElementById('nres').textContent='('+d.length+' en filtro)';
  pager(d.length,np);
+}
+
+function downloadXLS(){
+ const ordered=[...F].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
+ const header=['Corredor','Segmento','Categoría','Región','Ejecutivo','Tendencia',
+   'Portal+SS '+META.anio_ant,'Tradicional '+META.anio_ant,'Total '+META.anio_ant,
+   'Portal+SS '+META.anio,'Tradicional '+META.anio,'Total '+META.anio,
+   'FECU elegible','Headroom'];
+ const rows=ordered.map(x=>[
+  x.n,x.s,x.c||'',x.rg||'',x.e,x.t,
+  x.pp25||0,x.pt25||0,x.p25,
+  x.pp26||0,x.pt26||0,x.p26,
+  x.fecu,x.head
+ ]);
+ const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+ ws['!cols']=[{wch:50},{wch:18},{wch:14},{wch:16},{wch:28},{wch:14},
+  {wch:16},{wch:16},{wch:12},{wch:16},{wch:16},{wch:12},{wch:14},{wch:14}];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'Corredores ANS');
+ const tipo=prodField==='all'?'Todos':prodField==='pp26'?'Portal_Renovacion':'Tradicional_VentaNueva';
+ XLSX.writeFile(wb,`ANS_Corredores_${tipo}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 function pager(n,np){
  const p=document.getElementById('pager');
@@ -255,36 +368,61 @@ function hbar(canvas,old,labels,dsets,horiz){
 function charts(){
  const idxSel=new Set(F.map(x=>CORR.indexOf(x)));
  const y=+fy.value;
- // 1) por compañía: pss vs trad
+ const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
+
+ // 1) Por compañía — responde a prodField
  const agg={};
  for(const [i,c,yy,p,t] of DCIA){ if(yy!==y||!idxSel.has(i))continue;
   agg[c]=agg[c]||{p:0,t:0}; agg[c].p+=p; agg[c].t+=t; }
- const rows=Object.entries(agg).map(([c,v])=>({n:CIAS[c],p:v.p,t:v.t,tot:v.p+v.t}))
-  .filter(x=>Math.abs(x.tot)>1).sort((a,b)=>b.tot-a.tot).slice(0,12);
- ccia=hbar(document.getElementById('ccia'),ccia,rows.map(x=>x.n),
-  [{label:'Portal+SS',data:rows.map(x=>Math.round(x.p)),backgroundColor:'#00B9AE'},
-   {label:'Tradicionales',data:rows.map(x=>Math.round(x.t)),backgroundColor:'#4A1E8C'}],true);
- // 2) por ramo (portal)
+ let aggArr=Object.entries(agg).map(([c,v])=>({n:CIAS[c],p:v.p,t:v.t,tot:v.p+v.t}));
+ let cciaDsets,cciaRows;
+ if(isAll){
+  cciaRows=aggArr.filter(x=>Math.abs(x.tot)>1).sort((a,b)=>b.tot-a.tot).slice(0,12);
+  cciaDsets=[
+   {label:'Portal+SS',data:cciaRows.map(x=>Math.round(x.p)),backgroundColor:'#00B9AE'},
+   {label:'Tradicionales',data:cciaRows.map(x=>Math.round(x.t)),backgroundColor:'#4A1E8C'}];
+ } else if(isPP){
+  cciaRows=aggArr.filter(x=>Math.abs(x.p)>1).sort((a,b)=>b.p-a.p).slice(0,12);
+  cciaDsets=[{label:'Portal+SS',data:cciaRows.map(x=>Math.round(x.p)),backgroundColor:'#00B9AE'}];
+ } else {
+  cciaRows=aggArr.filter(x=>Math.abs(x.t)>1).sort((a,b)=>b.t-a.t).slice(0,12);
+  cciaDsets=[{label:'Tradicionales',data:cciaRows.map(x=>Math.round(x.t)),backgroundColor:'#4A1E8C'}];
+ }
+ ccia=hbar(document.getElementById('ccia'),ccia,cciaRows.map(x=>x.n),cciaDsets,true);
+ document.getElementById('tcia').textContent='Por compañía — '+(isAll?'Portal+SS vs Tradicionales':isPP?'Solo Portal+SS':'Solo Tradicionales');
+
+ // 2) Por ramo — solo Portal+SS (DRAMO no tiene split trad; oculta si filtro=trad)
  const agr={};
  for(const [i,r,yy,m] of DRAMO){ if(yy!==y||!idxSel.has(i))continue; agr[r]=(agr[r]||0)+m; }
  const rr=Object.entries(agr).map(([r,m])=>({n:RAMOS[r],m})).filter(x=>Math.abs(x.m)>1)
   .sort((a,b)=>b.m-a.m).slice(0,14);
- cram=hbar(document.getElementById('cram'),cram,rr.map(x=>x.n),
-  [{label:'Portal+SS',data:rr.map(x=>Math.round(x.m)),backgroundColor:'#00B9AE'}],true);
- // 3) evolución mensual ambos años
+ if(isPT){
+  cram=hbar(document.getElementById('cram'),cram,[],[],true);
+  document.getElementById('tram').textContent='Por ramo — no disponible para Tradicionales';
+ } else {
+  cram=hbar(document.getElementById('cram'),cram,rr.map(x=>x.n),
+   [{label:'Portal+SS',data:rr.map(x=>Math.round(x.m)),backgroundColor:'#00B9AE'}],true);
+  document.getElementById('tram').textContent='Por ramo — '+(isAll?'solo Portal+SS':'Portal+SS seleccionado');
+ }
+
+ // 3) Evolución mensual — DMES es total; muestra con etiqueta según filtro
  const m0=Array(12).fill(0),m1=Array(12).fill(0);
  for(const [i,yy,mn,m] of DMES){ if(!idxSel.has(i))continue; (yy?m1:m0)[mn-1]+=m; }
  const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+ const mesLbl=isAll?'total (Portal+SS + Tradic.)':isPP?'Portal+SS (aprox. del total)':'Tradicionales (aprox. del total)';
+ const mesColor=isPP?'#00887f':isPT?'#3d177a':'#4A1E8C';
+ const mesColor0=isPP?'#7bd4cd':isPT?'#9070c0':'#B4A7D6';
  if(cmes)cmes.destroy();
  cmes=new Chart(document.getElementById('cmes'),{type:'line',
  data:{labels:MESES,datasets:[
-  {label:String(META.anio_ant),data:m0.map(x=>Math.round(x)),borderColor:'#B4A7D6',backgroundColor:'#B4A7D6',tension:.25},
-  {label:String(META.anio),data:m1.map((x,i)=>i<META.mes?Math.round(x):null),borderColor:'#4A1E8C',backgroundColor:'#4A1E8C',tension:.25}]},
+  {label:`${META.anio_ant} ${mesLbl}`,data:m0.map(x=>Math.round(x)),borderColor:mesColor0,backgroundColor:mesColor0,tension:.25},
+  {label:`${META.anio} ${mesLbl}`,data:m1.map((x,i)=>i<META.mes?Math.round(x):null),borderColor:mesColor,backgroundColor:mesColor,tension:.25}]},
  options:{responsive:true,maintainAspectRatio:false,
  plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
  tooltip:{callbacks:{label:c=>c.dataset.label+': UF '+fmt(c.raw)}}},
  scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
- // 4) FECU por ramo (mercado del corredor, ramos elegibles)
+
+ // 4) FECU por ramo
  const af={};
  for(const [i,rid,m] of DFECU){ if(!idxSel.has(i))continue; af[rid]=(af[rid]||0)+m; }
  const ff=Object.entries(af).map(([rid,m])=>({n:FRAMOS[rid],m})).filter(x=>Math.abs(x.m)>1)
