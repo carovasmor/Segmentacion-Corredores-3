@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Segmentación de Corredores ANS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="datos_segmentacion.js"></script>
+<style>
+:root{--mor:#4A1E8C;--tur:#00B9AE;--dark:#231A3C;--gris:#5F5E5A;--light:#F4F1FA;--bd:#e6e2f0}
+*{box-sizing:border-box;margin:0}
+body{font-family:Arial,Helvetica,sans-serif;color:#2b2b30;background:#faf9f6;padding-bottom:60px}
+header{background:var(--dark);color:#fff;padding:26px 5vw 22px}
+header h1{font-size:22px}
+header p{color:#C9C2D8;margin-top:6px;font-size:13px}
+main{padding:22px 5vw;max-width:1240px;margin:0 auto}
+h2{font-size:18px;color:var(--dark);margin:30px 0 4px}
+.sub{font-size:12.5px;color:var(--gris);margin-bottom:12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px}
+.card .k{font-size:12px;color:var(--gris)}
+.card .v{font-size:22px;font-weight:bold;color:var(--dark);margin-top:4px}
+.filtros{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:12px;margin:14px 0}
+.filtros select,.filtros input{padding:8px 10px;border:1px solid #cfc9e0;border-radius:8px;font-size:13px;background:#fff;color:#2b2b30;flex:1;min-width:130px}
+.filtros button{padding:8px 14px;border:none;border-radius:8px;background:var(--mor);color:#fff;font-size:13px;cursor:pointer}
+.msdd{position:relative;flex:1;min-width:130px}
+.msbtn{width:100%;padding:8px 10px;border:1px solid #cfc9e0;border-radius:8px;font-size:13px;background:#fff;color:#2b2b30;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msbtn:after{content:"▾";float:right;color:#9990b5}
+.mspanel{display:none;position:absolute;z-index:30;top:100%;left:0;right:0;margin-top:4px;background:#fff;border:1px solid #cfc9e0;border-radius:8px;box-shadow:0 6px 18px rgba(35,26,60,.15);padding:6px;max-height:260px;overflow:auto}
+.mspanel.open{display:block}
+.mspanel label{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:13px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.mspanel label:hover{background:var(--light)}
+.mspanel input{width:auto;flex:none;min-width:0}
+.msdot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.msall{display:flex;gap:6px;padding:4px 6px 8px;border-bottom:1px solid #eee;margin-bottom:4px}
+.msall button{flex:1;padding:5px;border:1px solid #cfc9e0;border-radius:6px;background:var(--light);color:var(--mor);font-size:11px;cursor:pointer;font-weight:bold}
+.msall button:hover{background:#ece6f7}
+.searchwrap{position:relative;flex:1;min-width:130px;display:flex}
+.searchwrap input{width:100%}
+.clearx{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;color:#9990b5;font-size:18px;cursor:pointer;display:none;line-height:1;padding:0}
+.clearx.show{display:block}
+
+
+.chartbox{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px;height:480px;position:relative}
+.leg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--gris);margin:8px 0}
+.leg span{display:flex;align-items:center;gap:5px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.tablewrap{overflow-x:auto;border:1px solid var(--bd);border-radius:10px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px}
+th{background:var(--mor);color:#fff;padding:9px 10px;text-align:left;font-size:11.5px;position:sticky;top:0;cursor:pointer;white-space:nowrap}
+td{padding:8px 10px;border-top:1px solid #f0edf7;white-space:nowrap}
+td.num,th.num{text-align:right}
+tr:hover td{background:#f8f6fc}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;color:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px}
+.box h3{font-size:14px;color:var(--dark);margin-bottom:8px}
+.cbx{position:relative;height:340px}
+.pager{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;align-items:center}
+.pager button{padding:6px 12px;border:1px solid #cfc9e0;border-radius:8px;background:#fff;color:var(--dark);font-size:12.5px;cursor:pointer}
+.pager button.on{background:var(--mor);color:#fff;border-color:var(--mor)}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager .info{font-size:12px;color:var(--gris);margin-left:4px}
+.note{font-size:11.5px;color:var(--gris);margin-top:10px}
+footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
+/* Toggle tipo producción */
+.tprod{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tprod span{font-size:12px;color:var(--gris);white-space:nowrap}
+.tprod-label{font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;min-width:110px}
+.tprod-btn{padding:7px 14px;border:1.5px solid #cfc9e0;border-radius:20px;background:#fff;color:var(--dark);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.tprod-btn:hover{border-color:var(--mor);color:var(--mor)}
+.tprod-btn.active{background:#1B7A50;color:#fff;border-color:#1B7A50}
+.tprod-btn.active.tp{background:#1B7A50;border-color:#1B7A50}
+.tprod-btn.active.tt{background:#1B7A50;border-color:#1B7A50}
+.tprod-btn.active.tv{background:#1B7A50;border-color:#1B7A50}
+/* Columna activa en tabla */
+.col-act{background:#f0f9ff!important;font-weight:700}
+.col-act-p{background:#e8faf7!important;font-weight:700;color:#006d63!important}
+.col-act-t{background:#f0ecfb!important;font-weight:700;color:#3d177a!important}
+/* Barra tabla-header */
+.tabla-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.btn-xls{padding:8px 16px;border:none;border-radius:8px;background:#1d7a4f;color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn-xls:hover{background:#155e3c}
+@media(max-width:760px){
+ .grid2{grid-template-columns:1fr}
+ .chartbox{height:380px;padding:8px}
+ header h1{font-size:18px}
+ .card .v{font-size:18px}
+ table{font-size:11.5px}
+ .filtros select,.filtros input{min-width:44%}
+}
+</style></head><body>
+<header><h1>Segmentación de Corredores &amp; Productividad — ANS</h1>
+<p id="hdr"></p></header>
+<main>
+<div class="cards" id="kpis"></div>
+
+<div class="filtros">
+ <div class="searchwrap"><input id="fq" list="dl" placeholder="Buscar corredor…" oninput="apply();toggleClear()"><button class="clearx" id="clearq" onclick="clearSearch()">×</button></div><datalist id="dl"></datalist>
+ <div class="msdd"><button type="button" class="msbtn" id="fsbtn" onclick="toggleMS(event)">Segmento: todos</button><div class="mspanel" id="fspanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="frbtn" onclick="toggleMS2(event,'frpanel')">Región: todos</button><div class="mspanel" id="frpanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="febtn" onclick="toggleMS2(event,'fepanel')">Ejecutivo: todos</button><div class="mspanel" id="fepanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="fcbtn" onclick="toggleMS2(event,'fcpanel')">Categoría: todos</button><div class="mspanel" id="fcpanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="ftbtn" onclick="toggleMS2(event,'ftpanel')">Tendencia: todos</button><div class="mspanel" id="ftpanel"></div></div>
+ <button onclick="reset()">Limpiar</button>
+</div>
+<div class="filtros" style="margin-top:0;padding:10px 14px;flex-direction:column;gap:10px">
+  <div class="tprod">
+    <span class="tprod-label">Canal:</span>
+    <button class="tprod-btn active" id="tp-all"  onclick="setCanal('all')">Todos</button>
+    <button class="tprod-btn tp"     id="tp-pp"   onclick="setCanal('pp26')">Portal</button>
+    <button class="tprod-btn tt"     id="tp-pt"   onclick="setCanal('pt26')">Tradicional</button>
+  </div>
+  <div class="tprod">
+    <span class="tprod-label">Tipo negocio:</span>
+    <button class="tprod-btn active" id="tt-all"  onclick="setTipo('all')">Todos</button>
+    <button class="tprod-btn tv"     id="tt-pt"   onclick="setTipo('pt26')">Venta Nueva</button>
+    <button class="tprod-btn tp"     id="tt-pp"   onclick="setTipo('pp26')">Renovación</button>
+  </div>
+</div>
+
+<h2>Matriz valor × potencial</h2>
+<p class="sub">Cada punto es un corredor (responde a los filtros). Ejes log. Toca un punto para ver el nombre; doble clic para filtrar solo ese corredor.</p>
+<div class="leg" id="leg"></div>
+<div class="chartbox"><canvas id="mx"></canvas></div>
+
+<div class="tabla-hdr">
+  <div>
+    <h2 style="margin:30px 0 4px">Detalle Corredor <span id="nres" style="font-weight:normal;font-size:13px;color:var(--gris)"></span></h2>
+    <p class="sub">Ordena haciendo clic en los encabezados. 100 filas por página — usa el paginador para avanzar.</p>
+  </div>
+  <button class="btn-xls" onclick="downloadXLS()">⬇ Descargar XLS</button>
+</div>
+<div class="tablewrap"><table id="tc"><thead><tr>
+<th onclick="sortBy('n')">Corredor</th><th onclick="sortBy('s')">Segmento</th><th onclick="sortBy('c')">Cat</th>
+<th onclick="sortBy('rg')">Región</th><th onclick="sortBy('e')">Ejecutivo</th><th onclick="sortBy('t')">Tendencia</th>
+<th class="num" onclick="sortBy('pp25')" id="thPP25">Portal+SS 2025</th>
+<th class="num" onclick="sortBy('pt25')" id="thPT25">Tradic. 2025</th>
+<th class="num" onclick="sortBy('p25')"  id="thP25">Total 2025</th>
+<th class="num" onclick="sortBy('pp26')" id="thPP26">Portal+SS 2026</th>
+<th class="num" onclick="sortBy('pt26')" id="thPT26">Tradic. 2026</th>
+<th class="num" onclick="sortBy('p26')"  id="thP26">Total 2026</th>
+<th class="num" onclick="sortBy('fecu')"   id="thFECU">FECU</th>
+<th class="num" onclick="sortBy('head')"   id="thHEAD">Headroom</th>
+</tr></thead><tbody></tbody></table></div>
+<div class="pager" id="pager"></div>
+
+<h2>Producción de la selección</h2>
+<p class="sub">Los tres gráficos responden a los filtros de arriba (segmento, región, ejecutivo, categoría, tendencia o búsqueda). Elige el año para los dos primeros.</p>
+<div class="filtros" style="margin-top:0">
+ <select id="fy" onchange="charts()"></select>
+</div>
+<div class="grid2">
+ <div class="box"><h3 id="tcia">Por compañía — Portal+SS vs Tradicionales</h3><div class="cbx"><canvas id="ccia"></canvas></div></div>
+ <div class="box"><h3 id="tram">Por ramo — solo Portal+SS</h3><div class="cbx"><canvas id="cram"></canvas></div></div>
+</div>
+<div class="box" style="margin-top:14px"><h3>Evolución mensual de la selección</h3><div class="cbx" style="height:280px"><canvas id="cmes"></canvas></div></div>
+<div class="box" style="margin-top:14px"><h3>Potencial FECU por ramo — mercado del corredor (ramos elegibles)</h3><div class="cbx" style="height:420px"><canvas id="cfecu"></canvas></div></div>
+<p class="note">Tradicionales no tiene apertura de ramo en la fuente, por eso el gráfico de ramos considera solo Portal+SS. La venta del año en curso llega hasta el último mes de producción real cargado.</p>
+</main>
+<footer>ANS · La Insurtech de Chile — Documento de trabajo interno. Metodología: headroom = FECU elegible (solo ramos objetivo ANS, cías ANS + no ANS) − producción ANS año anterior; segmentos por cortes p75; universo red sin Grandes Brokers.</footer>
+<script>
+const COLS={'Socio Estratégico':'#4A1E8C','Por Conquistar':'#eda100','Fidelizar':'#1baf7a','Semillero':'#2a78d6','Reactivar':'#e34948'};
+const ORD=['Socio Estratégico','Por Conquistar','Fidelizar','Semillero','Reactivar'];
+const fmt=n=>Math.round(n).toLocaleString('es-CL');
+document.getElementById('hdr').textContent=`Red de ${CORR.length} corredores ANS vigentes (sin Grandes Brokers) · Producción real ${META.anio} cerrada a ${META.meses_txt} · Potencial FECU elegible (solo ramos objetivo ANS)`;
+
+function opts(id,label,vals){const s=document.getElementById(id);s.innerHTML=`<option value="">${label}: todos</option>`+vals.map(v=>`<option>${v}</option>`).join('');}
+// ==== Multi-select genérico para todos los filtros ====
+function buildMS(panelId,vals,withDot){
+ const pn=document.getElementById(panelId);
+ const bar=`<div class="msall"><button type="button" onclick="msAll('${panelId}',true)">Seleccionar todo</button><button type="button" onclick="msAll('${panelId}',false)">Ninguno</button></div>`;
+ pn.innerHTML=bar+vals.map(v=>{
+  const dot=withDot&&COLS[v]?`<span class="msdot" style="background:${COLS[v]}"></span>`:'';
+  return `<label><input type="checkbox" value="${String(v).replace(/"/g,'&quot;')}" onchange="apply()">${dot}${v}</label>`;
+ }).join('');
+}
+function msAll(panelId,val){document.querySelectorAll('#'+panelId+' input[type=checkbox]').forEach(i=>i.checked=val);apply();}
+function toggleClear(){document.getElementById('clearq').classList.toggle('show',!!document.getElementById('fq').value);}
+function clearSearch(){document.getElementById('fq').value='';toggleClear();apply();}
+function selOf(panelId){return [...document.querySelectorAll('#'+panelId+' input:checked')].map(i=>i.value);}
+function toggleMS(e){e.stopPropagation();document.getElementById('fspanel').classList.toggle('open');}
+function toggleMS2(e,panelId){e.stopPropagation();
+ document.querySelectorAll('.mspanel').forEach(p=>{if(p.id!==panelId)p.classList.remove('open')});
+ document.getElementById(panelId).classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.msdd'))document.querySelectorAll('.mspanel').forEach(p=>p.classList.remove('open'));});
+function updBtn(btnId,panelId,label){const sel=selOf(panelId);
+ document.getElementById(btnId).textContent=label+': '+(sel.length===0?'todos':sel.length===1?sel[0]:sel.length+' seleccionados');}
+// construir cada filtro
+buildMS('fspanel',ORD,true);
+buildMS('frpanel',[...[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort(),'Sin región'],false);
+buildMS('fepanel',[...new Set(CORR.map(x=>x.e))].sort(),false);
+buildMS('fcpanel',[...[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort(),'Sin categoría'],false);
+buildMS('ftpanel',[...new Set(CORR.map(x=>x.t))].sort(),false);
+function segSel(){return selOf('fspanel');}
+
+
+
+
+
+let F=[...CORR], sortK='head', sortD=-1, chart=null, page=1;
+const PAGE=100;
+let prodField='all'; // computed from canalField + tipoField
+let canalField='all'; // 'all' | 'pp26' | 'pt26'
+let tipoField='all';  // 'all' | 'pp26'(ren) | 'pt26'(vn)
+
+function setCanal(f){
+  canalField=f;
+  // resaltar botones Canal
+  ['tp-all','tp-pp','tp-pt'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
+  document.getElementById(f==='all'?'tp-all':f==='pp26'?'tp-pp':'tp-pt').classList.add('active');
+  refreshProd();
+}
+function setTipo(f){
+  tipoField=f;
+  // resaltar botones Tipo
+  ['tt-all','tt-pp','tt-pt'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active');});
+  document.getElementById(f==='all'?'tt-all':f==='pp26'?'tt-pp':'tt-pt').classList.add('active');
+  refreshProd();
+}
+function refreshProd(){
+  // Canal tiene prioridad; si Canal=Todos, aplica Tipo
+  prodField = canalField!=='all' ? canalField : tipoField!=='all' ? tipoField : 'all';
+  apply();
+}
+const _pp25={},_pt25={};
+for(const [i,c,yy,p,t] of DCIA){
+  if(yy!==0) continue;
+  _pp25[i]=(_pp25[i]||0)+p;
+  _pt25[i]=(_pt25[i]||0)+t;
+}
+CORR.forEach((x,i)=>{x.pp25=Math.round(_pp25[i]||0);x.pt25=Math.round(_pt25[i]||0);});
+
+function filtered(){
+ const q=document.getElementById('fq').value.toLowerCase();
+ const segs=segSel(),regs=selOf('frpanel'),ejs=selOf('fepanel'),cats=selOf('fcpanel'),tends=selOf('ftpanel');
+ updBtn('fsbtn','fspanel','Segmento');updBtn('frbtn','frpanel','Región');updBtn('febtn','fepanel','Ejecutivo');
+ updBtn('fcbtn','fcpanel','Categoría');updBtn('ftbtn','ftpanel','Tendencia');
+ return CORR.filter(x=>(!q||x.n.toLowerCase().includes(q))
+  &&(segs.length===0||segs.includes(x.s))
+  &&(regs.length===0||regs.includes(x.rg)||(regs.includes('Sin región')&&(!x.rg||x.rg.trim()==='')))
+  &&(ejs.length===0||ejs.includes(x.e))
+  &&(cats.length===0||cats.includes(x.c)||(cats.includes('Sin categoría')&&(!x.c||x.c.trim()==='')))
+  &&(tends.length===0||tends.includes(x.t)));
+}
+function kpis(d){
+ const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
+ const pp26=d.reduce((a,x)=>a+(x.pp26||0),0),pt26=d.reduce((a,x)=>a+(x.pt26||0),0);
+ const pp25=d.reduce((a,x)=>a+(x.pp25||0),0),pt25=d.reduce((a,x)=>a+(x.pt25||0),0);
+ const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
+ // Colores: Portal/Renovación = teal, Tradicional = morado, VentaNueva = verde, año → borde
+ const C_PP='#006d63', C_PT='#4A1E8C', C_VN='#1B7A50';
+ const selC=isPP?C_PP:isPT?C_PT:'#231A3C';
+ // Determinar si el filtro activo es Venta Nueva (pt26 vía tipoField)
+ const isVN = prodField==='pt26' && tipoField==='pt26' && canalField==='all';
+ const activeC = isVN?C_VN:selC;
+ // Bordes por año y tipo
+ const HL_PP26=isPP?`border-top:3px solid ${C_PP};background:#e0f6f3`:`border-top:3px solid #1B7A50`;
+ const HL_PT26=isVN?`border-top:3px solid ${C_VN};background:#e4f5ec`:isPT?`border-top:3px solid ${C_PT};background:#ede9fb`:`border-top:3px solid #1B7A50`;
+ const HL_T26 =`border-top:3px solid #1B7A50${isAll?';background:#edfaf5':';opacity:.65'}`;
+ const HL_PP25=isPP?`border-top:3px solid ${C_PP};background:#f0ecfb`:`border-top:3px solid #4A1E8C`;
+ const HL_PT25=isVN?`border-top:3px solid ${C_VN};background:#e4f5ec`:isPT?`border-top:3px solid ${C_PT};background:#ede9fb`:`border-top:3px solid #4A1E8C`;
+ const HL_T25 =`border-top:3px solid #4A1E8C${isAll?';background:#f4f0ff':';opacity:.65'}`;
+ document.getElementById('kpis').innerHTML=
+ `<div class="card"><div class="k">Corredores</div><div class="v">${d.length}</div></div>
+  <div class="card" style="${HL_PP26}"><div class="k">Portal+SS ${META.anio} (UF)</div><div class="v" style="color:#006d63">${fmt(pp26)}</div></div>
+  <div class="card" style="${HL_PT26}"><div class="k">Tradicional ${META.anio} (UF)</div><div class="v" style="color:${isVN?C_VN:C_PT}">${fmt(pt26)}</div></div>
+  <div class="card" style="${HL_T26}"><div class="k">Total ${META.anio} (UF)</div><div class="v" style="color:#0f5235">${fmt(p26)}</div></div>
+  <div class="card" style="${HL_PP25}"><div class="k">Portal+SS ${META.anio_ant} (UF)</div><div class="v" style="color:#006d63">${fmt(pp25)}</div></div>
+  <div class="card" style="${HL_PT25}"><div class="k">Tradicional ${META.anio_ant} (UF)</div><div class="v" style="color:${isVN?C_VN:C_PT}">${fmt(pt25)}</div></div>
+  <div class="card" style="${HL_T25}"><div class="k">Total ${META.anio_ant} (UF)</div><div class="v" style="color:#231A3C">${fmt(p25)}</div></div>
+  <div class="card" style="border-top:3px solid #6B7280"><div class="k">FECU elegible (UF)</div><div class="v" style="color:#374151">${fmt(fe)}</div></div>
+  <div class="card" style="border-top:3px solid #6B7280"><div class="k">Headroom (UF)</div><div class="v" style="color:#374151">${fmt(h)}</div></div>`;
+}
+function legend(d){
+ document.getElementById('leg').innerHTML=ORD.map(s=>{
+  const n=d.filter(x=>x.s===s).length;
+  return `<span><span class="dot" style="background:${COLS[s]}"></span>${s} (${n})</span>`}).join('');
+}
+const lineas={id:'lin',afterDatasetsDraw(ch){const{ctx,chartArea:a,scales:{x,y}}=ch;ctx.save();
+ctx.strokeStyle='#999';ctx.setLineDash([6,4]);ctx.lineWidth=1.1;
+const xv=x.getPixelForValue(META.cortes.valor);ctx.beginPath();ctx.moveTo(xv,a.top);ctx.lineTo(xv,a.bottom);ctx.stroke();
+const yh=y.getPixelForValue(META.cortes.head);ctx.beginPath();ctx.moveTo(a.left,yh);ctx.lineTo(a.right,yh);ctx.stroke();
+ctx.setLineDash([]);ctx.font='500 11px Arial';ctx.fillStyle='#777';
+ctx.fillText('Corte valor UF '+fmt(META.cortes.valor),xv+5,a.top+12);
+ctx.fillText('Corte potencial UF '+fmt(META.cortes.head),a.left+5,yh-6);ctx.restore();}};
+function draw(d){
+ const ds=ORD.map(s=>({label:s,data:d.filter(x=>x.s===s).map(x=>({x:Math.max(x.p25,1),y:Math.max(x.head,1),n:x.n,e:x.e})),
+  backgroundColor:COLS[s]+'B3',borderColor:COLS[s],pointRadius:3.5,pointHoverRadius:6}));
+ if(chart)chart.destroy();
+ chart=new Chart(document.getElementById('mx'),{type:'scatter',data:{datasets:ds},
+ options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:true},
+ onClick:(evt,els)=>{if(els&&els.length){const now=Date.now();if(window._lastPt&&window._lastPt.i===els[0].datasetIndex&&window._lastPt.j===els[0].index&&(now-window._lastPt.t)<400){const raw=chart.data.datasets[els[0].datasetIndex].data[els[0].index];if(raw&&raw.n){document.getElementById('fq').value=raw.n;toggleClear();apply();document.getElementById('mx').scrollIntoView({behavior:'smooth',block:'center'});}}window._lastPt={i:els[0].datasetIndex,j:els[0].index,t:now};}},
+ plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].raw.n,
+ label:c=>[c.dataset.label+' · '+c.raw.e,'Prod '+META.anio_ant+': UF '+fmt(c.raw.x),'Headroom: UF '+fmt(c.raw.y)]}}},
+ scales:{x:{type:'logarithmic',title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
+  ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}},
+ y:{type:'logarithmic',title:{display:true,text:'Headroom capturable (UF, log)'},
+  ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}}}},plugins:[lineas]});
+}
+function tabla(d){
+ const ordered=[...d].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
+ const np=Math.max(1,Math.ceil(ordered.length/PAGE));
+ if(page>np)page=np;
+ const rows=ordered.slice((page-1)*PAGE,page*PAGE);
+ const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
+
+ // Paletas base por año
+ const MOR_BASE='#4A1E8C', MOR_ACT='#2d0e6e', MOR_DIM='#7a5aaa';   // 2025 morado
+ const GRN_BASE='#1B7A50', GRN_ACT='#0f5235', GRN_DIM='#4da87a';   // 2026 verde
+ const GRY='#6B7280';                                                  // FECU/HR gris
+
+ // Columnas 2025
+ document.getElementById('thPP25').style.background = isPP?MOR_ACT:isPT?MOR_DIM:MOR_BASE;
+ document.getElementById('thPT25').style.background = isPT?MOR_ACT:isPP?MOR_DIM:MOR_BASE;
+ document.getElementById('thP25') .style.background = isAll?MOR_BASE:MOR_DIM;
+ // Columnas 2026
+ document.getElementById('thPP26').style.background = isPP?GRN_ACT:isPT?GRN_DIM:GRN_BASE;
+ document.getElementById('thPT26').style.background = isPT?GRN_ACT:isPP?GRN_DIM:GRN_BASE;
+ document.getElementById('thP26') .style.background = isAll?GRN_BASE:GRN_DIM;
+ // FECU y Headroom — siempre gris
+ document.getElementById('thFECU').style.background=GRY;
+ document.getElementById('thHEAD').style.background=GRY;
+
+ // Clases de resaltado en celdas
+ const clPP25=isPP?'num col-act-p':'num', clPT25=isPT?'num col-act-t':'num', clP25=isAll?'num col-act':'num';
+ const clPP26=isPP?'num col-act-p':'num', clPT26=isPT?'num col-act-t':'num', clP26=isAll?'num col-act':'num';
+
+ document.querySelector('#tc tbody').innerHTML=rows.map(x=>`<tr>
+  <td>${x.n}</td>
+  <td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td>
+  <td>${x.c||''}</td><td>${x.rg||''}</td>
+  <td style="font-size:11px">${x.e}</td><td>${x.t}</td>
+  <td class="${clPP25}" style="color:#4A1E8C">${fmt(x.pp25||0)}</td>
+  <td class="${clPT25}" style="color:#4A1E8C">${fmt(x.pt25||0)}</td>
+  <td class="${clP25}"  style="color:#231A3C">${fmt(x.p25)}</td>
+  <td class="${clPP26}" style="color:#1B7A50">${fmt(x.pp26||0)}</td>
+  <td class="${clPT26}" style="color:#1B7A50">${fmt(x.pt26||0)}</td>
+  <td class="${clP26}"  style="color:#0f5235">${fmt(x.p26)}</td>
+  <td class="num" style="color:#374151">${fmt(x.fecu)}</td>
+  <td class="num" style="color:#374151"><b>${fmt(x.head)}</b></td>
+ </tr>`).join('');
+ document.getElementById('nres').textContent='('+d.length+' en filtro)';
+ pager(d.length,np);
+}
+
+function downloadXLS(){
+ const ordered=[...F].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
+ const header=['Corredor','Segmento','Categoría','Región','Ejecutivo','Tendencia',
+   'Portal+SS '+META.anio_ant,'Tradicional '+META.anio_ant,'Total '+META.anio_ant,
+   'Portal+SS '+META.anio,'Tradicional '+META.anio,'Total '+META.anio,
+   'FECU elegible','Headroom'];
+ const rows=ordered.map(x=>[
+  x.n,x.s,x.c||'',x.rg||'',x.e,x.t,
+  x.pp25||0,x.pt25||0,x.p25,
+  x.pp26||0,x.pt26||0,x.p26,
+  x.fecu,x.head
+ ]);
+ const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
+ ws['!cols']=[{wch:50},{wch:18},{wch:14},{wch:16},{wch:28},{wch:14},
+  {wch:16},{wch:16},{wch:12},{wch:16},{wch:16},{wch:12},{wch:14},{wch:14}];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'Corredores ANS');
+ const tipo=prodField==='all'?'Todos':prodField==='pp26'?'Portal_Renovacion':'Tradicional_VentaNueva';
+ XLSX.writeFile(wb,`ANS_Corredores_${tipo}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function pager(n,np){
+ const p=document.getElementById('pager');
+ if(np<=1){p.innerHTML=n?'<span class="info">'+n+' corredores</span>':'';return;}
+ let bt=[];
+ bt.push('<button '+(page===1?'disabled':'')+' onclick="goPage('+(page-1)+')">‹ Anterior</button>');
+ const nums=new Set([1,2,np-1,np,page-1,page,page+1]);
+ let last=0;
+ [...nums].filter(x=>x>=1&&x<=np).sort((a,b)=>a-b).forEach(x=>{
+  if(x-last>1)bt.push('<span class="info">…</span>');
+  bt.push('<button class="'+(x===page?'on':'')+'" onclick="goPage('+x+')">'+x+'</button>');
+  last=x;});
+ bt.push('<button '+(page===np?'disabled':'')+' onclick="goPage('+(page+1)+')">Siguiente ›</button>');
+ bt.push('<span class="info">Filas '+((page-1)*PAGE+1)+'–'+Math.min(page*PAGE,n)+' de '+n+'</span>');
+ p.innerHTML=bt.join('');
+}
+function goPage(x){page=x;tabla(F);document.getElementById('tc').scrollIntoView({behavior:'smooth',block:'start'});}
+function sortBy(k){sortD=(sortK===k)?-sortD:-1;sortK=k;page=1;tabla(F);}
+function apply(){F=filtered();page=1;kpis(F);legend(F);draw(F);tabla(F);if(typeof charts==='function'&&document.getElementById('fy').options.length)charts();}
+function reset(){document.querySelectorAll('.mspanel input').forEach(i=>i.checked=false);document.getElementById('fq').value='';apply();}
+
+let ccia=null,cram=null,cmes=null,cfecu=null,RUTSEL=null;
+document.getElementById('dl').innerHTML=CORR.map(x=>`<option value="${x.n}">`).join('');
+const fy=document.getElementById('fy');
+fy.innerHTML=`<option value="1">Año ${META.anio} (a ${META.meses_txt})</option><option value="0">Año ${META.anio_ant} (completo)</option>`;
+function hbar(canvas,old,labels,dsets,horiz){
+ if(old)old.destroy();
+ return new Chart(canvas,{type:'bar',
+ data:{labels:labels,datasets:dsets},
+ options:{indexAxis:horiz?'y':'x',responsive:true,maintainAspectRatio:false,
+ plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+ tooltip:{callbacks:{label:c=>c.dataset.label+': UF '+fmt(c.raw)}}},
+ scales:{x:{ticks:{callback:v=>horiz?fmt(v):undefined,font:{size:10}},stacked:false},
+ y:{ticks:{font:{size:10}},stacked:false}}}});
+}
+function charts(){
+ const idxSel=new Set(F.map(x=>CORR.indexOf(x)));
+ const y=+fy.value;
+ const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
+
+ // 1) Por compañía — responde a prodField
+ const agg={};
+ for(const [i,c,yy,p,t] of DCIA){ if(yy!==y||!idxSel.has(i))continue;
+  agg[c]=agg[c]||{p:0,t:0}; agg[c].p+=p; agg[c].t+=t; }
+ let aggArr=Object.entries(agg).map(([c,v])=>({n:CIAS[c],p:v.p,t:v.t,tot:v.p+v.t}));
+ let cciaDsets,cciaRows;
+ if(isAll){
+  cciaRows=aggArr.filter(x=>Math.abs(x.tot)>1).sort((a,b)=>b.tot-a.tot).slice(0,12);
+  cciaDsets=[
+   {label:'Portal+SS',data:cciaRows.map(x=>Math.round(x.p)),backgroundColor:'#00B9AE'},
+   {label:'Tradicionales',data:cciaRows.map(x=>Math.round(x.t)),backgroundColor:'#4A1E8C'}];
+ } else if(isPP){
+  cciaRows=aggArr.filter(x=>Math.abs(x.p)>1).sort((a,b)=>b.p-a.p).slice(0,12);
+  cciaDsets=[{label:'Portal+SS',data:cciaRows.map(x=>Math.round(x.p)),backgroundColor:'#00B9AE'}];
+ } else {
+  cciaRows=aggArr.filter(x=>Math.abs(x.t)>1).sort((a,b)=>b.t-a.t).slice(0,12);
+  cciaDsets=[{label:'Tradicionales',data:cciaRows.map(x=>Math.round(x.t)),backgroundColor:'#4A1E8C'}];
+ }
+ ccia=hbar(document.getElementById('ccia'),ccia,cciaRows.map(x=>x.n),cciaDsets,true);
+ document.getElementById('tcia').textContent='Por compañía — '+(isAll?'Portal+SS vs Tradicionales':isPP?'Solo Portal+SS':'Solo Tradicionales');
+
+ // 2) Por ramo — solo Portal+SS (DRAMO no tiene split trad; oculta si filtro=trad)
+ const agr={};
+ for(const [i,r,yy,m] of DRAMO){ if(yy!==y||!idxSel.has(i))continue; agr[r]=(agr[r]||0)+m; }
+ const rr=Object.entries(agr).map(([r,m])=>({n:RAMOS[r],m})).filter(x=>Math.abs(x.m)>1)
+  .sort((a,b)=>b.m-a.m).slice(0,14);
+ if(isPT){
+  cram=hbar(document.getElementById('cram'),cram,[],[],true);
+  document.getElementById('tram').textContent='Por ramo — no disponible para Tradicionales';
+ } else {
+  cram=hbar(document.getElementById('cram'),cram,rr.map(x=>x.n),
+   [{label:'Portal+SS',data:rr.map(x=>Math.round(x.m)),backgroundColor:'#00B9AE'}],true);
+  document.getElementById('tram').textContent='Por ramo — '+(isAll?'solo Portal+SS':'Portal+SS seleccionado');
+ }
+
+ // 3) Evolución mensual — DMES es total; muestra con etiqueta según filtro
+ const m0=Array(12).fill(0),m1=Array(12).fill(0);
+ for(const [i,yy,mn,m] of DMES){ if(!idxSel.has(i))continue; (yy?m1:m0)[mn-1]+=m; }
+ const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+ const mesLbl=isAll?'total (Portal+SS + Tradic.)':isPP?'Portal+SS (aprox. del total)':'Tradicionales (aprox. del total)';
+ const mesColor=isPP?'#00887f':isPT?'#3d177a':'#4A1E8C';
+ const mesColor0=isPP?'#7bd4cd':isPT?'#9070c0':'#B4A7D6';
+ if(cmes)cmes.destroy();
+ cmes=new Chart(document.getElementById('cmes'),{type:'line',
+ data:{labels:MESES,datasets:[
+  {label:`${META.anio_ant} ${mesLbl}`,data:m0.map(x=>Math.round(x)),borderColor:mesColor0,backgroundColor:mesColor0,tension:.25},
+  {label:`${META.anio} ${mesLbl}`,data:m1.map((x,i)=>i<META.mes?Math.round(x):null),borderColor:mesColor,backgroundColor:mesColor,tension:.25}]},
+ options:{responsive:true,maintainAspectRatio:false,
+ plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+ tooltip:{callbacks:{label:c=>c.dataset.label+': UF '+fmt(c.raw)}}},
+ scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}},x:{ticks:{font:{size:10}}}}}});
+
+ // 4) FECU por ramo
+ const af={};
+ for(const [i,rid,m] of DFECU){ if(!idxSel.has(i))continue; af[rid]=(af[rid]||0)+m; }
+ const ff=Object.entries(af).map(([rid,m])=>({n:FRAMOS[rid],m})).filter(x=>Math.abs(x.m)>1)
+  .sort((a,b)=>b.m-a.m);
+ cfecu=hbar(document.getElementById('cfecu'),cfecu,ff.map(x=>x.n),
+  [{label:'FECU elegible (UF)',data:ff.map(x=>Math.round(x.m)),backgroundColor:'#eda100'}],true);
+}
+apply();charts();
+</script></body></html>
