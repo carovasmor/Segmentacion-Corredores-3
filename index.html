@@ -64,6 +64,7 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 /* Toggle tipo producción */
 .tprod{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .tprod span{font-size:12px;color:var(--gris);white-space:nowrap}
+.tprod-label{font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;min-width:110px}
 .tprod-btn{padding:7px 14px;border:1.5px solid #cfc9e0;border-radius:20px;background:#fff;color:var(--dark);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
 .tprod-btn:hover{border-color:var(--mor);color:var(--mor)}
 .tprod-btn.active{background:var(--mor);color:#fff;border-color:var(--mor)}
@@ -100,12 +101,18 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
  <div class="msdd"><button type="button" class="msbtn" id="ftbtn" onclick="toggleMS2(event,'ftpanel')">Tendencia: todos</button><div class="mspanel" id="ftpanel"></div></div>
  <button onclick="reset()">Limpiar</button>
 </div>
-<div class="filtros" style="margin-top:0;padding:10px 14px">
+<div class="filtros" style="margin-top:0;padding:10px 14px;flex-direction:column;gap:10px">
   <div class="tprod">
-    <span>Tipo producción:</span>
-    <button class="tprod-btn active" id="tp-all" onclick="setProd('all')">Todos</button>
-    <button class="tprod-btn tp" id="tp-pp" onclick="setProd('pp26')">🔵 Renovación / Portal</button>
-    <button class="tprod-btn tt" id="tp-pt" onclick="setProd('pt26')">🟣 Venta Nueva / Tradicional</button>
+    <span class="tprod-label">Canal:</span>
+    <button class="tprod-btn active" id="tp-all"  onclick="setProd('all')">Todos</button>
+    <button class="tprod-btn tp"     id="tp-pp"   onclick="setProd('pp26')">Portal</button>
+    <button class="tprod-btn tt"     id="tp-pt"   onclick="setProd('pt26')">Tradicional</button>
+  </div>
+  <div class="tprod">
+    <span class="tprod-label">Tipo negocio:</span>
+    <button class="tprod-btn active" id="tt-all"  onclick="setProd('all')">Todos</button>
+    <button class="tprod-btn tt"     id="tt-pt"   onclick="setProd('pt26')">Venta Nueva</button>
+    <button class="tprod-btn tp"     id="tt-pp"   onclick="setProd('pp26')">Renovación</button>
   </div>
 </div>
 
@@ -202,8 +209,21 @@ CORR.forEach((x,i)=>{x.pp25=Math.round(_pp25[i]||0);x.pt25=Math.round(_pt25[i]||
 
 function setProd(f){
   prodField=f;
-  document.querySelectorAll('.tprod-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById(f==='all'?'tp-all':f==='pp26'?'tp-pp':'tp-pt').classList.add('active');
+  // Sincronizar ambas filas de filtros
+  ['tp-all','tp-pp','tp-pt','tt-all','tt-pp','tt-pt'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  if(f==='all'){
+    document.getElementById('tp-all').classList.add('active');
+    document.getElementById('tt-all').classList.add('active');
+  } else if(f==='pp26'){
+    document.getElementById('tp-pp').classList.add('active');
+    document.getElementById('tt-pp').classList.add('active');
+  } else {
+    document.getElementById('tp-pt').classList.add('active');
+    document.getElementById('tt-pt').classList.add('active');
+  }
   apply();
 }
 function filtered(){
