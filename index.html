@@ -91,17 +91,6 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 <header><h1>Segmentación de Corredores &amp; Productividad — ANS</h1>
 <p id="hdr"></p></header>
 <main>
-<div class="cards" id="kpis"></div>
-
-<div class="filtros">
- <div class="searchwrap"><input id="fq" list="dl" placeholder="Buscar corredor…" oninput="apply();toggleClear()"><button class="clearx" id="clearq" onclick="clearSearch()">×</button></div><datalist id="dl"></datalist>
- <div class="msdd"><button type="button" class="msbtn" id="fsbtn" onclick="toggleMS(event)">Segmento: todos</button><div class="mspanel" id="fspanel"></div></div>
- <div class="msdd"><button type="button" class="msbtn" id="frbtn" onclick="toggleMS2(event,'frpanel')">Región: todos</button><div class="mspanel" id="frpanel"></div></div>
- <div class="msdd"><button type="button" class="msbtn" id="febtn" onclick="toggleMS2(event,'fepanel')">Ejecutivo: todos</button><div class="mspanel" id="fepanel"></div></div>
- <div class="msdd"><button type="button" class="msbtn" id="fcbtn" onclick="toggleMS2(event,'fcpanel')">Categoría: todos</button><div class="mspanel" id="fcpanel"></div></div>
- <div class="msdd"><button type="button" class="msbtn" id="ftbtn" onclick="toggleMS2(event,'ftpanel')">Tendencia: todos</button><div class="mspanel" id="ftpanel"></div></div>
- <button onclick="reset()">Limpiar</button>
-</div>
 <div class="filtros" style="margin-top:0;padding:10px 14px;flex-direction:column;gap:10px">
   <div class="tprod">
     <span class="tprod-label">Canal:</span>
@@ -116,6 +105,18 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
     <button class="tprod-btn tp"     id="tt-pp"   onclick="setTipo('pp26')">Renovación</button>
   </div>
 </div>
+<div class="cards" id="kpis"></div>
+
+<div class="filtros">
+ <div class="searchwrap"><input id="fq" list="dl" placeholder="Buscar corredor…" oninput="apply();toggleClear()"><button class="clearx" id="clearq" onclick="clearSearch()">×</button></div><datalist id="dl"></datalist>
+ <div class="msdd"><button type="button" class="msbtn" id="fsbtn" onclick="toggleMS(event)">Segmento: todos</button><div class="mspanel" id="fspanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="frbtn" onclick="toggleMS2(event,'frpanel')">Región: todos</button><div class="mspanel" id="frpanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="febtn" onclick="toggleMS2(event,'fepanel')">Ejecutivo: todos</button><div class="mspanel" id="fepanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="fcbtn" onclick="toggleMS2(event,'fcpanel')">Categoría: todos</button><div class="mspanel" id="fcpanel"></div></div>
+ <div class="msdd"><button type="button" class="msbtn" id="ftbtn" onclick="toggleMS2(event,'ftpanel')">Tendencia: todos</button><div class="mspanel" id="ftpanel"></div></div>
+ <button onclick="reset()">Limpiar</button>
+</div>
+
 
 <h2>Matriz valor × potencial</h2>
 <p class="sub">Cada punto es un corredor (responde a los filtros). Ejes log. Toca un punto para ver el nombre; doble clic para filtrar solo ese corredor.</p>
@@ -217,17 +218,10 @@ function setTipo(f){
   refreshProd();
 }
 function refreshProd(){
-  // Canal tiene prioridad; si Canal=Todos, aplica Tipo
+  // Canal y Tipo se combinan. prodField resume para la columna de tabla/gráficos.
   prodField = canalField!=='all' ? canalField : tipoField!=='all' ? tipoField : 'all';
   apply();
 }
-const _pp25={},_pt25={};
-for(const [i,c,yy,p,t] of DCIA){
-  if(yy!==0) continue;
-  _pp25[i]=(_pp25[i]||0)+p;
-  _pt25[i]=(_pt25[i]||0)+t;
-}
-CORR.forEach((x,i)=>{x.pp25=Math.round(_pp25[i]||0);x.pt25=Math.round(_pt25[i]||0);});
 
 function filtered(){
  const q=document.getElementById('fq').value.toLowerCase();
@@ -242,31 +236,40 @@ function filtered(){
   &&(tends.length===0||tends.includes(x.t)));
 }
 function kpis(d){
- const p25=d.reduce((a,x)=>a+x.p25,0),p26=d.reduce((a,x)=>a+x.p26,0),fe=d.reduce((a,x)=>a+x.fecu,0),h=d.reduce((a,x)=>a+x.head,0);
- const pp26=d.reduce((a,x)=>a+(x.pp26||0),0),pt26=d.reduce((a,x)=>a+(x.pt26||0),0);
- const pp25=d.reduce((a,x)=>a+(x.pp25||0),0),pt25=d.reduce((a,x)=>a+(x.pt25||0),0);
- const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
- // Colores: Portal/Renovación = teal, Tradicional = morado, VentaNueva = verde, año → borde
- const C_PP='#006d63', C_PT='#4A1E8C', C_VN='#1B7A50';
- const selC=isPP?C_PP:isPT?C_PT:'#231A3C';
- // Determinar si el filtro activo es Venta Nueva (pt26 vía tipoField)
- const isVN = prodField==='pt26' && tipoField==='pt26' && canalField==='all';
- const activeC = isVN?C_VN:selC;
- // Bordes por año y tipo
- const HL_PP26=isPP?`border-top:3px solid ${C_PP};background:#e0f6f3`:`border-top:3px solid #1B7A50`;
- const HL_PT26=isVN?`border-top:3px solid ${C_VN};background:#e4f5ec`:isPT?`border-top:3px solid ${C_PT};background:#ede9fb`:`border-top:3px solid #1B7A50`;
- const HL_T26 =`border-top:3px solid #1B7A50${isAll?';background:#edfaf5':';opacity:.65'}`;
- const HL_PP25=isPP?`border-top:3px solid ${C_PP};background:#f0ecfb`:`border-top:3px solid #4A1E8C`;
- const HL_PT25=isVN?`border-top:3px solid ${C_VN};background:#e4f5ec`:isPT?`border-top:3px solid ${C_PT};background:#ede9fb`:`border-top:3px solid #4A1E8C`;
- const HL_T25 =`border-top:3px solid #4A1E8C${isAll?';background:#f4f0ff':';opacity:.65'}`;
+ // Suma según canal y tipo seleccionados usando los 4 campos: ppvn,pprn,ptvn,ptrn
+ const canal=canalField, tipo=tipoField;
+ // helpers de suma
+ const S=(f)=>d.reduce((a,x)=>a+(x[f]||0),0);
+ // Portal según tipo
+ let portal, trad, etiqueta26, etiqueta25;
+ if(tipo==='pt26'){ // Venta Nueva
+   portal=S('ppvn'); trad=S('ptvn');
+ } else if(tipo==='pp26'){ // Renovación
+   portal=S('pprn'); trad=S('ptrn');
+ } else { // Todos los tipos
+   portal=S('pp26'); trad=S('pt26');
+ }
+ const total=portal+trad;
+ // Para 2025 mantenemos totales (la fuente 2025 no está desglosada por tipo)
+ const pp25=S('pp25'),pt25=S('pt25'),p25=S('p25');
+ const fe=S('fecu'),h=S('head');
+ // qué mostrar según canal
+ const showPortal = canal==='all'||canal==='pp26';
+ const showTrad   = canal==='all'||canal==='pt26';
+ const showTotal  = canal==='all';
+ const tipoTxt = tipo==='pt26'?' · Venta Nueva':tipo==='pp26'?' · Renovación':'';
+ const C_PP='#006d63', C_PT='#4A1E8C', C_VN='#1B7A50', C_TOT='#0f5235';
+ const cardPortal = showPortal?`<div class="card" style="border-top:3px solid ${C_PP};background:#e0f6f3"><div class="k">Portal+SS ${META.anio}${tipoTxt} (UF)</div><div class="v" style="color:${C_PP}">${fmt(portal)}</div></div>`:'';
+ const cardTrad   = showTrad?`<div class="card" style="border-top:3px solid ${C_PT};background:#ede9fb"><div class="k">Tradicional ${META.anio}${tipoTxt} (UF)</div><div class="v" style="color:${C_PT}">${fmt(trad)}</div></div>`:'';
+ const cardTotal  = showTotal?`<div class="card" style="border-top:3px solid ${C_TOT};background:#edfaf5"><div class="k">Total ${META.anio}${tipoTxt} (UF)</div><div class="v" style="color:${C_TOT}">${fmt(total)}</div></div>`:'';
+ // 2025 (solo si canal=all y tipo=all, para no confundir; si hay filtro mostramos totales atenuados)
+ const card25 = (canal==='all'&&tipo==='all')?
+   `<div class="card" style="border-top:3px solid ${C_PP}"><div class="k">Portal+SS ${META.anio_ant} (UF)</div><div class="v" style="color:${C_PP}">${fmt(pp25)}</div></div>
+    <div class="card" style="border-top:3px solid ${C_PT}"><div class="k">Tradicional ${META.anio_ant} (UF)</div><div class="v" style="color:${C_PT}">${fmt(pt25)}</div></div>
+    <div class="card" style="border-top:3px solid #231A3C"><div class="k">Total ${META.anio_ant} (UF)</div><div class="v" style="color:#231A3C">${fmt(p25)}</div></div>`:'';
  document.getElementById('kpis').innerHTML=
  `<div class="card"><div class="k">Corredores</div><div class="v">${d.length}</div></div>
-  <div class="card" style="${HL_PP26}"><div class="k">Portal+SS ${META.anio} (UF)</div><div class="v" style="color:#006d63">${fmt(pp26)}</div></div>
-  <div class="card" style="${HL_PT26}"><div class="k">Tradicional ${META.anio} (UF)</div><div class="v" style="color:${isVN?C_VN:C_PT}">${fmt(pt26)}</div></div>
-  <div class="card" style="${HL_T26}"><div class="k">Total ${META.anio} (UF)</div><div class="v" style="color:#0f5235">${fmt(p26)}</div></div>
-  <div class="card" style="${HL_PP25}"><div class="k">Portal+SS ${META.anio_ant} (UF)</div><div class="v" style="color:#006d63">${fmt(pp25)}</div></div>
-  <div class="card" style="${HL_PT25}"><div class="k">Tradicional ${META.anio_ant} (UF)</div><div class="v" style="color:${isVN?C_VN:C_PT}">${fmt(pt25)}</div></div>
-  <div class="card" style="${HL_T25}"><div class="k">Total ${META.anio_ant} (UF)</div><div class="v" style="color:#231A3C">${fmt(p25)}</div></div>
+  ${cardPortal}${cardTrad}${cardTotal}${card25}
   <div class="card" style="border-top:3px solid #6B7280"><div class="k">FECU elegible (UF)</div><div class="v" style="color:#374151">${fmt(fe)}</div></div>
   <div class="card" style="border-top:3px solid #6B7280"><div class="k">Headroom (UF)</div><div class="v" style="color:#374151">${fmt(h)}</div></div>`;
 }
