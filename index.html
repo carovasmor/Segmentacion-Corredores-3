@@ -307,9 +307,14 @@ function tabla(d){
  const MOR_BASE='#4A1E8C', GRN_BASE='#1B7A50', GRY='#6B7280';
  // valores 2026 según tipo de negocio seleccionado
  const val26=(x)=>{
-   if(tipoField==='pt26') return {pp:x.ppvn||0, pt:x.ptvn||0};   // Venta Nueva
-   if(tipoField==='pp26') return {pp:x.pprn||0, pt:x.ptrn||0};   // Renovación
-   return {pp:x.pp26||0, pt:x.pt26||0};                          // Todos
+   if(tipoField==='pt26') return {pp:x.ppvn||0, pt:x.ptvn||0};
+   if(tipoField==='pp26') return {pp:x.pprn||0, pt:x.ptrn||0};
+   return {pp:x.pp26||0, pt:x.pt26||0};
+ };
+ const val25=(x)=>{
+   if(tipoField==='pt26') return {pp:x.ppvn25||0, pt:x.ptvn25||0};
+   if(tipoField==='pp26') return {pp:x.pprn25||0, pt:x.ptrn25||0};
+   return {pp:x.pp25||0, pt:x.pt25||0};
  };
  const tipoTxt = tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':'';
  // mostrar/ocultar columnas por canal
@@ -326,7 +331,9 @@ function tabla(d){
  document.getElementById('thPT26').style.background=GRN_BASE;
  document.getElementById('thP26').style.background=GRN_BASE;
  // 2025 se mantiene completo (sin desglose por tipo en la fuente) — se atenúa si hay filtro de tipo
- const dim25 = tipoField!=='all';
+ const dim25 = false;
+ document.getElementById('thPP25').textContent='Portal+SS '+META.anio_ant+tipoTxt;
+ document.getElementById('thPT25').textContent='Tradic. '+META.anio_ant+tipoTxt;
  document.getElementById('thPP25').style.display=showPP?'':'none';
  document.getElementById('thPT25').style.display=showPT?'':'none';
  document.getElementById('thP25').style.display=showTot?'':'none';
@@ -336,16 +343,15 @@ function tabla(d){
  document.getElementById('thFECU').style.background=GRY;
  document.getElementById('thHEAD').style.background=GRY;
  document.querySelector('#tc tbody').innerHTML=rows.map(x=>{
-  const v=val26(x);
-  const hide='style="display:none"';
+  const v=val26(x); const v25=val25(x);
   return `<tr>
   <td>${x.n}</td>
   <td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td>
   <td>${x.c||''}</td><td>${x.rg||''}</td>
   <td style="font-size:11px">${x.e}</td><td>${x.t}</td>
-  <td class="num" ${showPP?'':'style=display:none'} style="color:#4A1E8C">${fmt(x.pp25||0)}</td>
-  <td class="num" ${showPT?'':'style=display:none'} style="color:#4A1E8C">${fmt(x.pt25||0)}</td>
-  <td class="num" ${showTot?'':'style=display:none'} style="color:#231A3C">${fmt(x.p25)}</td>
+  <td class="num" ${showPP?'':'style=display:none'} style="color:#4A1E8C">${fmt(v25.pp)}</td>
+  <td class="num" ${showPT?'':'style=display:none'} style="color:#4A1E8C">${fmt(v25.pt)}</td>
+  <td class="num" ${showTot?'':'style=display:none'} style="color:#231A3C">${fmt(v25.pp+v25.pt)}</td>
   <td class="num" ${showPP?'':'style=display:none'} style="color:#1B7A50">${fmt(v.pp)}</td>
   <td class="num" ${showPT?'':'style=display:none'} style="color:#1B7A50">${fmt(v.pt)}</td>
   <td class="num" ${showTot?'':'style=display:none'} style="color:#0f5235">${fmt(v.pp+v.pt)}</td>
