@@ -190,7 +190,7 @@ buildMS('fspanel',ORD,true);
 buildMS('frpanel',[...[...new Set(CORR.map(x=>x.rg).filter(Boolean))].sort(),'Sin región'],false);
 buildMS('fepanel',[...new Set(CORR.map(x=>x.e))].sort(),false);
 buildMS('fcpanel',[...[...new Set(CORR.map(x=>x.c).filter(Boolean))].sort(),'Sin categoría'],false);
-buildMS('ftpanel',[...new Set(CORR.map(x=>x.t))].sort(),false);
+buildMS('ftpanel',['Creciendo','Estable','Cayendo','Cayendo fuerte','Nuevo','Sin actividad'],false);
 function segSel(){return selOf('fspanel');}
 
 
@@ -223,6 +223,22 @@ function refreshProd(){
   apply();
 }
 
+// Tendencia dinámica GLOBAL — depende de canalField y tipoField actuales
+function tendDinG(x){
+  const v26=(tipoField==='pt26')?{pp:x.ppvn||0,pt:x.ptvn||0}:(tipoField==='pp26')?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
+  const v25=(tipoField==='pt26')?{pp:x.ppvn25||0,pt:x.ptvn25||0}:(tipoField==='pp26')?{pp:x.pprn25||0,pt:x.ptrn25||0}:{pp:x.pp25||0,pt:x.pt25||0};
+  let r26,r25;
+  if(canalField==='pp26'){r26=v26.pp;r25=v25.pp;}
+  else if(canalField==='pt26'){r26=v26.pt;r25=v25.pt;}
+  else {r26=v26.pp+v26.pt;r25=v25.pp+v25.pt;}
+  const MES=META.mes||7; const proy=r26/MES*12;
+  if(r25<=0) return proy>0?'Nuevo':'Sin actividad';
+  const ra=proy/r25;
+  if(ra>1.15) return 'Creciendo';
+  if(ra>=0.95) return 'Estable';
+  if(ra>=0.6) return 'Cayendo';
+  return 'Cayendo fuerte';
+}
 function filtered(){
  const q=document.getElementById('fq').value.toLowerCase();
  const segs=segSel(),regs=selOf('frpanel'),ejs=selOf('fepanel'),cats=selOf('fcpanel'),tends=selOf('ftpanel');
@@ -233,7 +249,7 @@ function filtered(){
   &&(regs.length===0||regs.includes(x.rg)||(regs.includes('Sin región')&&(!x.rg||x.rg.trim()==='')))
   &&(ejs.length===0||ejs.includes(x.e))
   &&(cats.length===0||cats.includes(x.c)||(cats.includes('Sin categoría')&&(!x.c||x.c.trim()==='')))
-  &&(tends.length===0||tends.includes(x.t)));
+  &&(tends.length===0||tends.includes(tendDinG(x))));
 }
 function kpis(d){
  // Suma según canal y tipo seleccionados usando los 4 campos: ppvn,pprn,ptvn,ptrn
@@ -383,7 +399,7 @@ function tabla(d){
   <td>${x.n}</td>
   <td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td>
   <td>${x.c||''}</td><td>${x.rg||''}</td>
-  <td style="font-size:11px">${x.e}</td><td>${tendDin(x)}</td>
+  <td style="font-size:11px">${x.e}</td><td>${tendDinG(x)}</td>
   <td class="num" ${showPP?'':'style=display:none'} style="color:#4A1E8C">${fmt(v25.pp)}</td>
   <td class="num" ${showPT?'':'style=display:none'} style="color:#4A1E8C">${fmt(v25.pt)}</td>
   <td class="num" ${showTot?'':'style=display:none'} style="color:#231A3C">${fmt(v25.pp+v25.pt)}</td>
@@ -409,7 +425,7 @@ function downloadXLS(){
    'FECU elegible','Headroom'];
  const v26=(x)=>tipoField==='pt26'?{pp:x.ppvn||0,pt:x.ptvn||0}:tipoField==='pp26'?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
  const rows=ordered.map(x=>{const v=v26(x);return [
-  x.n,x.s,x.c||'',x.rg||'',x.e,tendDinXLS(x),
+  x.n,x.s,x.c||'',x.rg||'',x.e,tendDinG(x),
   x.pp25||0,x.pt25||0,x.p25,
   v.pp,v.pt,v.pp+v.pt,
   x.fecu,x.head
