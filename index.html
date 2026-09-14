@@ -316,6 +316,23 @@ function tabla(d){
    if(tipoField==='pp26') return {pp:x.pprn25||0, pt:x.ptrn25||0};
    return {pp:x.pp25||0, pt:x.pt25||0};
  };
+ // Tendencia dinámica: proyección lineal 2026 (x12/mes) vs 2025, sobre lo que se está viendo (canal+tipo)
+ const MES=META.mes||7;
+ const tendDin=(x)=>{
+   const v=val26(x), w=val25(x);
+   // según canal seleccionado, tomar la parte correspondiente
+   let r26,r25;
+   if(canalField==='pp26'){r26=v.pp;r25=w.pp;}
+   else if(canalField==='pt26'){r26=v.pt;r25=w.pt;}
+   else {r26=v.pp+v.pt;r25=w.pp+w.pt;}
+   const proy=r26/MES*12;
+   if(r25<=0) return proy>0?'Nuevo':'Sin actividad';
+   const ratio=proy/r25;
+   if(ratio>1.15) return 'Creciendo';
+   if(ratio>=0.95) return 'Estable';
+   if(ratio>=0.6) return 'Cayendo';
+   return 'Cayendo fuerte';
+ };
  const tipoTxt = tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':'';
  // mostrar/ocultar columnas por canal
  const showPP = canalField==='all'||canalField==='pp26';
@@ -348,7 +365,7 @@ function tabla(d){
   <td>${x.n}</td>
   <td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td>
   <td>${x.c||''}</td><td>${x.rg||''}</td>
-  <td style="font-size:11px">${x.e}</td><td>${x.t}</td>
+  <td style="font-size:11px">${x.e}</td><td>${tendDin(x)}</td>
   <td class="num" ${showPP?'':'style=display:none'} style="color:#4A1E8C">${fmt(v25.pp)}</td>
   <td class="num" ${showPT?'':'style=display:none'} style="color:#4A1E8C">${fmt(v25.pt)}</td>
   <td class="num" ${showTot?'':'style=display:none'} style="color:#231A3C">${fmt(v25.pp+v25.pt)}</td>
@@ -363,6 +380,10 @@ function tabla(d){
 }
 
 function downloadXLS(){
+ const MESx=META.mes||7;
+ const v26x=(x)=>tipoField==='pt26'?{pp:x.ppvn||0,pt:x.ptvn||0}:tipoField==='pp26'?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
+ const v25x=(x)=>tipoField==='pt26'?{pp:x.ppvn25||0,pt:x.ptvn25||0}:tipoField==='pp26'?{pp:x.pprn25||0,pt:x.ptrn25||0}:{pp:x.pp25||0,pt:x.pt25||0};
+ const tendDinXLS=(x)=>{const v=v26x(x),w=v25x(x);let r26,r25;if(canalField==='pp26'){r26=v.pp;r25=w.pp;}else if(canalField==='pt26'){r26=v.pt;r25=w.pt;}else{r26=v.pp+v.pt;r25=w.pp+w.pt;}const proy=r26/MESx*12;if(r25<=0)return proy>0?'Nuevo':'Sin actividad';const ra=proy/r25;return ra>1.15?'Creciendo':ra>=0.95?'Estable':ra>=0.6?'Cayendo':'Cayendo fuerte';};
  const ordered=[...F].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
  const header=['Corredor','Segmento','Categoría','Región','Ejecutivo','Tendencia',
    'Portal+SS '+META.anio_ant,'Tradicional '+META.anio_ant,'Total '+META.anio_ant,
@@ -370,7 +391,7 @@ function downloadXLS(){
    'FECU elegible','Headroom'];
  const v26=(x)=>tipoField==='pt26'?{pp:x.ppvn||0,pt:x.ptvn||0}:tipoField==='pp26'?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
  const rows=ordered.map(x=>{const v=v26(x);return [
-  x.n,x.s,x.c||'',x.rg||'',x.e,x.t,
+  x.n,x.s,x.c||'',x.rg||'',x.e,tendDinXLS(x),
   x.pp25||0,x.pt25||0,x.p25,
   v.pp,v.pt,v.pp+v.pt,
   x.fecu,x.head
