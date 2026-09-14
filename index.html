@@ -299,8 +299,22 @@ function draw(d){
  y:{type:'logarithmic',title:{display:true,text:'Headroom capturable (UF, log)'},
   ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}}}},plugins:[lineas]});
 }
+function sortVal(x,k){
+  // valores dinámicos según canal+tipo para las columnas de producción
+  const v26=(tipoField==='pt26')?{pp:x.ppvn||0,pt:x.ptvn||0}:(tipoField==='pp26')?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
+  const v25=(tipoField==='pt26')?{pp:x.ppvn25||0,pt:x.ptvn25||0}:(tipoField==='pp26')?{pp:x.pprn25||0,pt:x.ptrn25||0}:{pp:x.pp25||0,pt:x.pt25||0};
+  switch(k){
+    case 'pp26': return v26.pp;
+    case 'pt26': return v26.pt;
+    case 'p26':  return v26.pp+v26.pt;
+    case 'pp25': return v25.pp;
+    case 'pt25': return v25.pt;
+    case 'p25':  return v25.pp+v25.pt;
+    default: return x[k];
+  }
+}
 function tabla(d){
- const ordered=[...d].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
+ const ordered=[...d].sort((a,b)=>{const av=sortVal(a,sortK),bv=sortVal(b,sortK);return (av>bv?1:av<bv?-1:0)*sortD;});
  const np=Math.max(1,Math.ceil(ordered.length/PAGE));
  if(page>np)page=np;
  const rows=ordered.slice((page-1)*PAGE,page*PAGE);
@@ -384,7 +398,7 @@ function downloadXLS(){
  const v26x=(x)=>tipoField==='pt26'?{pp:x.ppvn||0,pt:x.ptvn||0}:tipoField==='pp26'?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
  const v25x=(x)=>tipoField==='pt26'?{pp:x.ppvn25||0,pt:x.ptvn25||0}:tipoField==='pp26'?{pp:x.pprn25||0,pt:x.ptrn25||0}:{pp:x.pp25||0,pt:x.pt25||0};
  const tendDinXLS=(x)=>{const v=v26x(x),w=v25x(x);let r26,r25;if(canalField==='pp26'){r26=v.pp;r25=w.pp;}else if(canalField==='pt26'){r26=v.pt;r25=w.pt;}else{r26=v.pp+v.pt;r25=w.pp+w.pt;}const proy=r26/MESx*12;if(r25<=0)return proy>0?'Nuevo':'Sin actividad';const ra=proy/r25;return ra>1.15?'Creciendo':ra>=0.95?'Estable':ra>=0.6?'Cayendo':'Cayendo fuerte';};
- const ordered=[...F].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
+ const ordered=[...F].sort((a,b)=>{const av=sortVal(a,sortK),bv=sortVal(b,sortK);return (av>bv?1:av<bv?-1:0)*sortD;});
  const header=['Corredor','Segmento','Categoría','Región','Ejecutivo','Tendencia',
    'Portal+SS '+META.anio_ant,'Tradicional '+META.anio_ant,'Total '+META.anio_ant,
    'Portal+SS '+META.anio+(tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':''),'Tradicional '+META.anio+(tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':''),'Total '+META.anio+(tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':''),
