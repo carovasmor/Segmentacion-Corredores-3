@@ -304,43 +304,54 @@ function tabla(d){
  const np=Math.max(1,Math.ceil(ordered.length/PAGE));
  if(page>np)page=np;
  const rows=ordered.slice((page-1)*PAGE,page*PAGE);
- const isPP=prodField==='pp26',isPT=prodField==='pt26',isAll=prodField==='all';
-
- // Paletas base por año
- const MOR_BASE='#4A1E8C', MOR_ACT='#2d0e6e', MOR_DIM='#7a5aaa';   // 2025 morado
- const GRN_BASE='#1B7A50', GRN_ACT='#0f5235', GRN_DIM='#4da87a';   // 2026 verde
- const GRY='#6B7280';                                                  // FECU/HR gris
-
- // Columnas 2025
- document.getElementById('thPP25').style.background = isPP?MOR_ACT:isPT?MOR_DIM:MOR_BASE;
- document.getElementById('thPT25').style.background = isPT?MOR_ACT:isPP?MOR_DIM:MOR_BASE;
- document.getElementById('thP25') .style.background = isAll?MOR_BASE:MOR_DIM;
- // Columnas 2026
- document.getElementById('thPP26').style.background = isPP?GRN_ACT:isPT?GRN_DIM:GRN_BASE;
- document.getElementById('thPT26').style.background = isPT?GRN_ACT:isPP?GRN_DIM:GRN_BASE;
- document.getElementById('thP26') .style.background = isAll?GRN_BASE:GRN_DIM;
- // FECU y Headroom — siempre gris
+ const MOR_BASE='#4A1E8C', GRN_BASE='#1B7A50', GRY='#6B7280';
+ // valores 2026 según tipo de negocio seleccionado
+ const val26=(x)=>{
+   if(tipoField==='pt26') return {pp:x.ppvn||0, pt:x.ptvn||0};   // Venta Nueva
+   if(tipoField==='pp26') return {pp:x.pprn||0, pt:x.ptrn||0};   // Renovación
+   return {pp:x.pp26||0, pt:x.pt26||0};                          // Todos
+ };
+ const tipoTxt = tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':'';
+ // mostrar/ocultar columnas por canal
+ const showPP = canalField==='all'||canalField==='pp26';
+ const showPT = canalField==='all'||canalField==='pt26';
+ const showTot= canalField==='all';
+ // actualizar encabezados 2026
+ document.getElementById('thPP26').textContent='Portal+SS '+META.anio+tipoTxt;
+ document.getElementById('thPT26').textContent='Tradic. '+META.anio+tipoTxt;
+ document.getElementById('thPP26').style.display=showPP?'':'none';
+ document.getElementById('thPT26').style.display=showPT?'':'none';
+ document.getElementById('thP26').style.display=showTot?'':'none';
+ document.getElementById('thPP26').style.background=GRN_BASE;
+ document.getElementById('thPT26').style.background=GRN_BASE;
+ document.getElementById('thP26').style.background=GRN_BASE;
+ // 2025 se mantiene completo (sin desglose por tipo en la fuente) — se atenúa si hay filtro de tipo
+ const dim25 = tipoField!=='all';
+ document.getElementById('thPP25').style.display=showPP?'':'none';
+ document.getElementById('thPT25').style.display=showPT?'':'none';
+ document.getElementById('thP25').style.display=showTot?'':'none';
+ document.getElementById('thPP25').style.background=dim25?'#7a5aaa':MOR_BASE;
+ document.getElementById('thPT25').style.background=dim25?'#7a5aaa':MOR_BASE;
+ document.getElementById('thP25').style.background=dim25?'#7a5aaa':MOR_BASE;
  document.getElementById('thFECU').style.background=GRY;
  document.getElementById('thHEAD').style.background=GRY;
-
- // Clases de resaltado en celdas
- const clPP25=isPP?'num col-act-p':'num', clPT25=isPT?'num col-act-t':'num', clP25=isAll?'num col-act':'num';
- const clPP26=isPP?'num col-act-p':'num', clPT26=isPT?'num col-act-t':'num', clP26=isAll?'num col-act':'num';
-
- document.querySelector('#tc tbody').innerHTML=rows.map(x=>`<tr>
+ document.querySelector('#tc tbody').innerHTML=rows.map(x=>{
+  const v=val26(x);
+  const hide='style="display:none"';
+  return `<tr>
   <td>${x.n}</td>
   <td><span class="pill" style="background:${COLS[x.s]}">${x.s}</span></td>
   <td>${x.c||''}</td><td>${x.rg||''}</td>
   <td style="font-size:11px">${x.e}</td><td>${x.t}</td>
-  <td class="${clPP25}" style="color:#4A1E8C">${fmt(x.pp25||0)}</td>
-  <td class="${clPT25}" style="color:#4A1E8C">${fmt(x.pt25||0)}</td>
-  <td class="${clP25}"  style="color:#231A3C">${fmt(x.p25)}</td>
-  <td class="${clPP26}" style="color:#1B7A50">${fmt(x.pp26||0)}</td>
-  <td class="${clPT26}" style="color:#1B7A50">${fmt(x.pt26||0)}</td>
-  <td class="${clP26}"  style="color:#0f5235">${fmt(x.p26)}</td>
+  <td class="num" ${showPP?'':'style=display:none'} style="color:#4A1E8C">${fmt(x.pp25||0)}</td>
+  <td class="num" ${showPT?'':'style=display:none'} style="color:#4A1E8C">${fmt(x.pt25||0)}</td>
+  <td class="num" ${showTot?'':'style=display:none'} style="color:#231A3C">${fmt(x.p25)}</td>
+  <td class="num" ${showPP?'':'style=display:none'} style="color:#1B7A50">${fmt(v.pp)}</td>
+  <td class="num" ${showPT?'':'style=display:none'} style="color:#1B7A50">${fmt(v.pt)}</td>
+  <td class="num" ${showTot?'':'style=display:none'} style="color:#0f5235">${fmt(v.pp+v.pt)}</td>
   <td class="num" style="color:#374151">${fmt(x.fecu)}</td>
   <td class="num" style="color:#374151"><b>${fmt(x.head)}</b></td>
- </tr>`).join('');
+ </tr>`;}).join('');
  document.getElementById('nres').textContent='('+d.length+' en filtro)';
  pager(d.length,np);
 }
@@ -349,14 +360,15 @@ function downloadXLS(){
  const ordered=[...F].sort((a,b)=>(a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0)*sortD);
  const header=['Corredor','Segmento','Categoría','Región','Ejecutivo','Tendencia',
    'Portal+SS '+META.anio_ant,'Tradicional '+META.anio_ant,'Total '+META.anio_ant,
-   'Portal+SS '+META.anio,'Tradicional '+META.anio,'Total '+META.anio,
+   'Portal+SS '+META.anio+(tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':''),'Tradicional '+META.anio+(tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':''),'Total '+META.anio+(tipoField==='pt26'?' VN':tipoField==='pp26'?' Ren':''),
    'FECU elegible','Headroom'];
- const rows=ordered.map(x=>[
+ const v26=(x)=>tipoField==='pt26'?{pp:x.ppvn||0,pt:x.ptvn||0}:tipoField==='pp26'?{pp:x.pprn||0,pt:x.ptrn||0}:{pp:x.pp26||0,pt:x.pt26||0};
+ const rows=ordered.map(x=>{const v=v26(x);return [
   x.n,x.s,x.c||'',x.rg||'',x.e,x.t,
   x.pp25||0,x.pt25||0,x.p25,
-  x.pp26||0,x.pt26||0,x.p26,
+  v.pp,v.pt,v.pp+v.pt,
   x.fecu,x.head
- ]);
+ ];});
  const ws=XLSX.utils.aoa_to_sheet([header,...rows]);
  ws['!cols']=[{wch:50},{wch:18},{wch:14},{wch:16},{wch:28},{wch:14},
   {wch:16},{wch:16},{wch:12},{wch:16},{wch:16},{wch:12},{wch:14},{wch:14}];
