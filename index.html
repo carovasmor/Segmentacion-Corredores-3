@@ -251,7 +251,11 @@ function kpis(d){
  }
  const total=portal+trad;
  // Para 2025 mantenemos totales (la fuente 2025 no está desglosada por tipo)
- const pp25=S('pp25'),pt25=S('pt25'),p25=S('p25');
+ let pp25,pt25;
+ if(tipo==='pt26'){pp25=S('ppvn25');pt25=S('ptvn25');}
+ else if(tipo==='pp26'){pp25=S('pprn25');pt25=S('ptrn25');}
+ else {pp25=S('pp25');pt25=S('pt25');}
+ const p25=pp25+pt25;
  const fe=S('fecu'),h=S('head');
  // qué mostrar según canal
  const showPortal = canal==='all'||canal==='pp26';
