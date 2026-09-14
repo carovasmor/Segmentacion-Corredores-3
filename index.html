@@ -263,10 +263,10 @@ function kpis(d){
  const cardTrad   = showTrad?`<div class="card" style="border-top:3px solid ${C_PT};background:#ede9fb"><div class="k">Tradicional ${META.anio}${tipoTxt} (UF)</div><div class="v" style="color:${C_PT}">${fmt(trad)}</div></div>`:'';
  const cardTotal  = showTotal?`<div class="card" style="border-top:3px solid ${C_TOT};background:#edfaf5"><div class="k">Total ${META.anio}${tipoTxt} (UF)</div><div class="v" style="color:${C_TOT}">${fmt(total)}</div></div>`:'';
  // 2025 (solo si canal=all y tipo=all, para no confundir; si hay filtro mostramos totales atenuados)
- const card25 = (canal==='all'&&tipo==='all')?
-   `<div class="card" style="border-top:3px solid ${C_PP}"><div class="k">Portal+SS ${META.anio_ant} (UF)</div><div class="v" style="color:${C_PP}">${fmt(pp25)}</div></div>
-    <div class="card" style="border-top:3px solid ${C_PT}"><div class="k">Tradicional ${META.anio_ant} (UF)</div><div class="v" style="color:${C_PT}">${fmt(pt25)}</div></div>
-    <div class="card" style="border-top:3px solid #231A3C"><div class="k">Total ${META.anio_ant} (UF)</div><div class="v" style="color:#231A3C">${fmt(p25)}</div></div>`:'';
+ const card25P = showPortal?`<div class="card" style="border-top:3px solid ${C_PP}"><div class="k">Portal+SS ${META.anio_ant}${tipoTxt} (UF)</div><div class="v" style="color:${C_PP}">${fmt(pp25)}</div></div>`:'';
+ const card25T = showTrad?`<div class="card" style="border-top:3px solid ${C_PT}"><div class="k">Tradicional ${META.anio_ant}${tipoTxt} (UF)</div><div class="v" style="color:${C_PT}">${fmt(pt25)}</div></div>`:'';
+ const card25Tot = showTotal?`<div class="card" style="border-top:3px solid #231A3C"><div class="k">Total ${META.anio_ant}${tipoTxt} (UF)</div><div class="v" style="color:#231A3C">${fmt(p25)}</div></div>`:'';
+ const card25 = card25P+card25T+card25Tot;
  document.getElementById('kpis').innerHTML=
  `<div class="card"><div class="k">Corredores</div><div class="v">${d.length}</div></div>
   ${cardPortal}${cardTrad}${cardTotal}${card25}
