@@ -326,9 +326,9 @@ function draw(d){
  onClick:(evt,els)=>{if(els&&els.length){const now=Date.now();if(window._lastPt&&window._lastPt.i===els[0].datasetIndex&&window._lastPt.j===els[0].index&&(now-window._lastPt.t)<400){const raw=chart.data.datasets[els[0].datasetIndex].data[els[0].index];if(raw&&raw.n){document.getElementById('fq').value=raw.n;toggleClear();apply();document.getElementById('mx').scrollIntoView({behavior:'smooth',block:'center'});}}window._lastPt={i:els[0].datasetIndex,j:els[0].index,t:now};}},
  plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].raw.n,
  label:c=>[c.raw.seg, c.raw.e, 'Prod 2025: UF '+fmt(c.raw.p25)+'  ·  FECU 2025: UF '+fmt(c.raw.fecu), 'Prod 2026: UF '+fmt(c.raw.p26), ejeY==='pen'?('Penetración: '+(c.raw.penreal!=null?c.raw.penreal.toFixed(1)+'%':'—')):('Headroom: UF '+fmt(c.raw.head))]}}},
- scales:{x:{type:'logarithmic',title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
+ scales:{x:{type:'logarithmic',min:1,max:200000,title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
   ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}},
- y:{type:'logarithmic',max:ejeY==='pen'?100:undefined,title:{display:true,text:ejeY==='pen'?'Penetración ANS/FECU (%, log)':'Headroom capturable (UF, log)'},
+ y:{type:'logarithmic',min:ejeY==='pen'?0.1:1,max:ejeY==='pen'?100:200000,title:{display:true,text:ejeY==='pen'?'Penetración ANS/FECU (%, log)':'Headroom capturable (UF, log)'},
   ticks:{callback:v=>ejeY==='pen'?([0.1,1,5,10,25,50,100].includes(v)?v+'%':null):([1,10,100,1000,10000,100000].includes(v)?fmt(v):null)}}}},plugins:[lineas]});
 }
 function sortVal(x,k){
