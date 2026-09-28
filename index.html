@@ -118,8 +118,12 @@ footer{padding:22px 5vw;font-size:11.5px;color:var(--gris)}
 </div>
 
 
-<h2>Matriz valor × penetración</h2>
-<p class="sub">Cada punto es un corredor (eje Y: % de su cartera FECU ya capturado por ANS) (responde a los filtros). Ejes log. Toca un punto para ver el nombre; doble clic para filtrar solo ese corredor.</p>
+<h2>Matriz valor × <span id="ejeLabel">penetración</span></h2>
+<div style="display:flex;gap:8px;margin:8px 0 4px">
+  <button id="btn-pen" onclick="setEjeY('pen')" style="padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:bold;font-size:12px;background:#4A1E8C;color:#fff">Penetración (%)</button>
+  <button id="btn-head" onclick="setEjeY('head')" style="padding:7px 16px;border-radius:8px;border:1px solid #4A1E8C;cursor:pointer;font-weight:bold;font-size:12px;background:#fff;color:#4A1E8C">Headroom (UF)</button>
+</div>
+<p class="sub" id="subMatriz">Cada punto es un corredor (eje Y: % de su cartera FECU ya capturado por ANS). Ejes log. Toca un punto para ver el nombre; doble clic para filtrar solo ese corredor.</p>
 <div class="leg" id="leg"></div>
 <div class="chartbox"><canvas id="mx"></canvas></div>
 
@@ -199,6 +203,13 @@ function segSel(){return selOf('fspanel');}
 
 
 let F=[...CORR], sortK='head', sortD=-1, chart=null, page=1;
+let ejeY='pen';
+function setEjeY(e){ejeY=e;
+ document.getElementById('btn-pen').style.background=e==='pen'?'#4A1E8C':'#fff';document.getElementById('btn-pen').style.color=e==='pen'?'#fff':'#4A1E8C';document.getElementById('btn-pen').style.border=e==='pen'?'none':'1px solid #4A1E8C';
+ document.getElementById('btn-head').style.background=e==='head'?'#4A1E8C':'#fff';document.getElementById('btn-head').style.color=e==='head'?'#fff':'#4A1E8C';document.getElementById('btn-head').style.border=e==='head'?'none':'1px solid #4A1E8C';
+ document.getElementById('ejeLabel').textContent=e==='pen'?'penetración':'headroom';
+ document.getElementById('subMatriz').textContent=e==='pen'?'Cada punto es un corredor (eje Y: % de su cartera FECU ya capturado por ANS). Ejes log. Doble clic para filtrar ese corredor.':'Cada punto es un corredor (eje Y: UF de cartera aún por capturar). Ejes log. Doble clic para filtrar ese corredor.';
+ apply();}
 const PAGE=100;
 let prodField='all'; // computed from canalField + tipoField
 let canalField='all'; // 'all' | 'pp26' | 'pt26'
@@ -302,23 +313,23 @@ function legend(d){
 const lineas={id:'lin',afterDatasetsDraw(ch){const{ctx,chartArea:a,scales:{x,y}}=ch;ctx.save();
 ctx.strokeStyle='#999';ctx.setLineDash([6,4]);ctx.lineWidth=1.1;
 const xv=x.getPixelForValue(META.cortes.valor);ctx.beginPath();ctx.moveTo(xv,a.top);ctx.lineTo(xv,a.bottom);ctx.stroke();
-const yh=y.getPixelForValue(META.cortes.pen);ctx.beginPath();ctx.moveTo(a.left,yh);ctx.lineTo(a.right,yh);ctx.stroke();
+const cy=(ejeY==='pen')?META.cortes.pen:META.cortes.head;const yh=y.getPixelForValue(cy);ctx.beginPath();ctx.moveTo(a.left,yh);ctx.lineTo(a.right,yh);ctx.stroke();
 ctx.setLineDash([]);ctx.font='500 11px Arial';ctx.fillStyle='#777';
 ctx.fillText('Corte valor UF '+fmt(META.cortes.valor),xv+5,a.top+12);
-ctx.fillText('Corte penetración '+META.cortes.pen+'%',a.left+5,yh-6);ctx.restore();}};
+ctx.fillText(ejeY==='pen'?('Corte penetración '+META.cortes.pen+'%'):('Corte potencial UF '+fmt(META.cortes.head)),a.left+5,yh-6);ctx.restore();}};
 function draw(d){
- const ds=ORD.map(s=>({label:s,data:d.filter(x=>x.s===s&&x.pen!=null&&x.pen>0).map(x=>({x:Math.max(x.p25,1),y:Math.min(Math.max(x.pen,0.1),100),n:x.n,e:x.e,seg:x.s,p25:x.p25,fecu:x.fecu,p26:x.p26,penreal:x.pen})),
+ const ds=ORD.map(s=>({label:s,data:d.filter(x=>x.s===s&&(ejeY==='pen'?(x.pen!=null&&x.pen>0):(x.head>0))).map(x=>({x:Math.max(x.p25,1),y:ejeY==='pen'?Math.min(Math.max(x.pen,0.1),100):Math.max(x.head,1),n:x.n,e:x.e,seg:x.s,p25:x.p25,fecu:x.fecu,p26:x.p26,penreal:x.pen,head:x.head})),
   backgroundColor:COLS[s]+'B3',borderColor:COLS[s],pointRadius:3.5,pointHoverRadius:6}));
  if(chart)chart.destroy();
  chart=new Chart(document.getElementById('mx'),{type:'scatter',data:{datasets:ds},
  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:true},
  onClick:(evt,els)=>{if(els&&els.length){const now=Date.now();if(window._lastPt&&window._lastPt.i===els[0].datasetIndex&&window._lastPt.j===els[0].index&&(now-window._lastPt.t)<400){const raw=chart.data.datasets[els[0].datasetIndex].data[els[0].index];if(raw&&raw.n){document.getElementById('fq').value=raw.n;toggleClear();apply();document.getElementById('mx').scrollIntoView({behavior:'smooth',block:'center'});}}window._lastPt={i:els[0].datasetIndex,j:els[0].index,t:now};}},
  plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].raw.n,
- label:c=>[c.raw.seg, c.raw.e, 'Prod 2025: UF '+fmt(c.raw.p25)+'  ·  FECU 2025: UF '+fmt(c.raw.fecu), 'Prod 2026: UF '+fmt(c.raw.p26)]}}},
+ label:c=>[c.raw.seg, c.raw.e, 'Prod 2025: UF '+fmt(c.raw.p25)+'  ·  FECU 2025: UF '+fmt(c.raw.fecu), 'Prod 2026: UF '+fmt(c.raw.p26), ejeY==='pen'?('Penetración: '+(c.raw.penreal!=null?c.raw.penreal.toFixed(1)+'%':'—')):('Headroom: UF '+fmt(c.raw.head))]}}},
  scales:{x:{type:'logarithmic',title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
   ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}},
- y:{type:'logarithmic',max:100,title:{display:true,text:'Penetración ANS/FECU (%, log)'},
-  ticks:{callback:v=>[0.1,1,5,10,25,50,100].includes(v)?v+'%':null}}}},plugins:[lineas]});
+ y:{type:'logarithmic',max:ejeY==='pen'?100:undefined,title:{display:true,text:ejeY==='pen'?'Penetración ANS/FECU (%, log)':'Headroom capturable (UF, log)'},
+  ticks:{callback:v=>ejeY==='pen'?([0.1,1,5,10,25,50,100].includes(v)?v+'%':null):([1,10,100,1000,10000,100000].includes(v)?fmt(v):null)}}}},plugins:[lineas]});
 }
 function sortVal(x,k){
   // valores dinámicos según canal+tipo para las columnas de producción
