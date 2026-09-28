@@ -307,18 +307,18 @@ ctx.setLineDash([]);ctx.font='500 11px Arial';ctx.fillStyle='#777';
 ctx.fillText('Corte valor UF '+fmt(META.cortes.valor),xv+5,a.top+12);
 ctx.fillText('Corte penetración '+META.cortes.pen+'%',a.left+5,yh-6);ctx.restore();}};
 function draw(d){
- const ds=ORD.map(s=>({label:s,data:d.filter(x=>x.s===s&&x.pen!=null&&x.pen>0).map(x=>({x:Math.max(x.p25,1),y:Math.max(x.pen,0.1),n:x.n,e:x.e})),
+ const ds=ORD.map(s=>({label:s,data:d.filter(x=>x.s===s&&x.pen!=null&&x.pen>0).map(x=>({x:Math.max(x.p25,1),y:Math.min(Math.max(x.pen,0.1),100),n:x.n,e:x.e,seg:x.s,p25:x.p25,fecu:x.fecu,p26:x.p26,penreal:x.pen})),
   backgroundColor:COLS[s]+'B3',borderColor:COLS[s],pointRadius:3.5,pointHoverRadius:6}));
  if(chart)chart.destroy();
  chart=new Chart(document.getElementById('mx'),{type:'scatter',data:{datasets:ds},
  options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:true},
  onClick:(evt,els)=>{if(els&&els.length){const now=Date.now();if(window._lastPt&&window._lastPt.i===els[0].datasetIndex&&window._lastPt.j===els[0].index&&(now-window._lastPt.t)<400){const raw=chart.data.datasets[els[0].datasetIndex].data[els[0].index];if(raw&&raw.n){document.getElementById('fq').value=raw.n;toggleClear();apply();document.getElementById('mx').scrollIntoView({behavior:'smooth',block:'center'});}}window._lastPt={i:els[0].datasetIndex,j:els[0].index,t:now};}},
  plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].raw.n,
- label:c=>[c.dataset.label+' · '+c.raw.e,'Prod '+META.anio_ant+': UF '+fmt(c.raw.x),'Penetración: '+c.raw.y.toFixed(1)+'%']}}},
+ label:c=>[c.raw.seg, c.raw.e, 'Prod 2025: UF '+fmt(c.raw.p25)+'  ·  FECU 2025: UF '+fmt(c.raw.fecu), 'Prod 2026: UF '+fmt(c.raw.p26)]}}},
  scales:{x:{type:'logarithmic',title:{display:true,text:'Producción ANS '+META.anio_ant+' (UF, log)'},
   ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmt(v):null}},
- y:{type:'logarithmic',title:{display:true,text:'Penetración ANS/FECU (%, log)'},
-  ticks:{callback:v=>[0.1,1,5,10,25,50,100,500].includes(v)?v+'%':null}}}},plugins:[lineas]});
+ y:{type:'logarithmic',max:100,title:{display:true,text:'Penetración ANS/FECU (%, log)'},
+  ticks:{callback:v=>[0.1,1,5,10,25,50,100].includes(v)?v+'%':null}}}},plugins:[lineas]});
 }
 function sortVal(x,k){
   // valores dinámicos según canal+tipo para las columnas de producción
